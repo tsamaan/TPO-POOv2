@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uml:Model xmlns:uml="http://www.omg.org/spec/UML/20131001" xmlns:xmi="http://www.omg.org/spec/XMI/20131001">
+  
+  <!-- ============================================= -->
+  <!-- PATRÓN STATE - Gestión de Estados del Scrim -->
+  <!-- ============================================= -->
+  
+  <packagedElement xmi:type="uml:Class" xmi:id="ScrimContext" name="ScrimContext">
+    <ownedAttribute xmi:type="uml:Property" name="currentState" type="ScrimState"/>
+    <ownedOperation name="setState">
+      <ownedParameter name="state" type="ScrimState"/>
+    </ownedOperation>
+    <ownedOperation name="postular">
+      <ownedParameter name="usuario" type="Usuario"/>
+      <ownedParameter name="rol" type="Rol"/>
+    </ownedOperation>
+    <ownedOperation name="confirmar">
+      <ownedParameter name="usuario" type="Usuario"/>
+    </ownedOperation>
+    <ownedOperation name="iniciar"/>
+    <ownedOperation name="finalizar"/>
+    <ownedOperation name="cancelar"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Interface" xmi:id="ScrimState" name="ScrimState">
+    <ownedOperation name="postular">
+      <ownedParameter name="context" type="ScrimContext"/>
+      <ownedParameter name="usuario" type="Usuario"/>
+      <ownedParameter name="rol" type="Rol"/>
+    </ownedOperation>
+    <ownedOperation name="confirmar">
+      <ownedParameter name="context" type="ScrimContext"/>
+      <ownedParameter name="usuario" type="Usuario"/>
+    </ownedOperation>
+    <ownedOperation name="iniciar">
+      <ownedParameter name="context" type="ScrimContext"/>
+    </ownedOperation>
+    <ownedOperation name="finalizar">
+      <ownedParameter name="context" type="ScrimContext"/>
+    </ownedOperation>
+    <ownedOperation name="cancelar">
+      <ownedParameter name="context" type="ScrimContext"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="BuscandoState" name="BuscandoState">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ScrimState"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="LobbyArmadoState" name="LobbyArmadoState">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ScrimState"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ConfirmadoState" name="ConfirmadoState">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ScrimState"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="EnJuegoState" name="EnJuegoState">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ScrimState"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="FinalizadoState" name="FinalizadoState">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ScrimState"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="CanceladoState" name="CanceladoState">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ScrimState"/>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- PATRÓN OBSERVER - Sistema de Notificaciones -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Class" xmi:id="DomainEventBus" name="DomainEventBus">
+    <ownedAttribute xmi:type="uml:Property" name="subscribers" type="EventSubscriber" upperValue="*"/>
+    <ownedOperation name="subscribe">
+      <ownedParameter name="subscriber" type="EventSubscriber"/>
+    </ownedOperation>
+    <ownedOperation name="unsubscribe">
+      <ownedParameter name="subscriber" type="EventSubscriber"/>
+    </ownedOperation>
+    <ownedOperation name="publish">
+      <ownedParameter name="event" type="DomainEvent"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Interface" xmi:id="EventSubscriber" name="EventSubscriber">
+    <ownedOperation name="onEvent">
+      <ownedParameter name="event" type="DomainEvent"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="DomainEvent" name="DomainEvent" isAbstract="true">
+    <ownedAttribute xmi:type="uml:Property" name="eventType" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="timestamp" type="LocalDateTime"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ScrimStateChangedEvent" name="ScrimStateChangedEvent">
+    <generalization xmi:type="uml:Generalization" general="DomainEvent"/>
+    <ownedAttribute xmi:type="uml:Property" name="scrimId" type="UUID"/>
+    <ownedAttribute xmi:type="uml:Property" name="previousState" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="newState" type="String"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="NotificationService" name="NotificationService">
+    <ownedAttribute xmi:type="uml:Property" name="eventBus" type="DomainEventBus"/>
+    <ownedAttribute xmi:type="uml:Property" name="notifierFactory" type="NotifierFactory"/>
+    <ownedOperation name="sendNotification">
+      <ownedParameter name="notification" type="Notification"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- PATRÓN STRATEGY - Estrategias de Emparejamiento -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Class" xmi:id="MatchmakingService" name="MatchmakingService">
+    <ownedAttribute xmi:type="uml:Property" name="strategy" type="MatchmakingStrategy"/>
+    <ownedOperation name="setStrategy">
+      <ownedParameter name="strategy" type="MatchmakingStrategy"/>
+    </ownedOperation>
+    <ownedOperation name="executeMatchmaking">
+      <ownedParameter name="candidates" type="Usuario" upperValue="*"/>
+      <ownedParameter name="scrim" type="Scrim"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Interface" xmi:id="MatchmakingStrategy" name="MatchmakingStrategy">
+    <ownedOperation name="selectPlayers">
+      <ownedParameter name="candidates" type="Usuario" upperValue="*"/>
+      <ownedParameter name="scrim" type="Scrim"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ByMMRStrategy" name="ByMMRStrategy">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="MatchmakingStrategy"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ByLatencyStrategy" name="ByLatencyStrategy">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="MatchmakingStrategy"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ByHistoryStrategy" name="ByHistoryStrategy">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="MatchmakingStrategy"/>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- PATRÓN COMPOSITE - Estructura de Equipos -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Interface" xmi:id="TeamComponent" name="TeamComponent">
+    <ownedOperation name="getPlayers"/>
+    <ownedOperation name="addPlayer">
+      <ownedParameter name="player" type="Usuario"/>
+    </ownedOperation>
+    <ownedOperation name="removePlayer">
+      <ownedParameter name="player" type="Usuario"/>
+    </ownedOperation>
+    <ownedOperation name="getAverageMMR"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Player" name="Player">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="TeamComponent"/>
+    <ownedAttribute xmi:type="uml:Property" name="name" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="mmr" type="double"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Team" name="Team">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="TeamComponent"/>
+    <ownedAttribute xmi:type="uml:Property" name="members" type="TeamComponent" upperValue="*"/>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- PATRÓN DECORATOR - Notificaciones Mejoradas -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Interface" xmi:id="Notifier" name="Notifier">
+    <ownedOperation name="send">
+      <ownedParameter name="notification" type="Notification"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="BaseNotifier" name="BaseNotifier">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="Notifier"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="NotifierDecorator" name="NotifierDecorator" isAbstract="true">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="Notifier"/>
+    <ownedAttribute xmi:type="uml:Property" name="wrappedNotifier" type="Notifier"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="RetryNotifier" name="RetryNotifier">
+    <generalization xmi:type="uml:Generalization" general="NotifierDecorator"/>
+    <ownedAttribute xmi:type="uml:Property" name="maxRetries" type="int"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="LoggingNotifier" name="LoggingNotifier">
+    <generalization xmi:type="uml:Generalization" general="NotifierDecorator"/>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- PATRÓN ADAPTER - Integraciones Externas -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Interface" xmi:id="ExternalNotificationService" name="ExternalNotificationService">
+    <ownedOperation name="sendMessage">
+      <ownedParameter name="message" type="String"/>
+      <ownedParameter name="recipient" type="String"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="DiscordAPI" name="DiscordAPI">
+    <ownedOperation name="sendToChannel">
+      <ownedParameter name="channelId" type="String"/>
+      <ownedParameter name="message" type="String"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="SendGridAPI" name="SendGridAPI">
+    <ownedOperation name="sendEmail">
+      <ownedParameter name="to" type="String"/>
+      <ownedParameter name="subject" type="String"/>
+      <ownedParameter name="body" type="String"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ConsoleNotifier" name="ConsoleNotifier">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ExternalNotificationService"/>
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="Notifier"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="DiscordAdapter" name="DiscordAdapter">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ExternalNotificationService"/>
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="Notifier"/>
+    <ownedAttribute xmi:type="uml:Property" name="discordAPI" type="DiscordAPI"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="EmailAdapter" name="EmailAdapter">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="ExternalNotificationService"/>
+    <interfaceRealization xmi:type="uml:InterfaceRealization" supplier="Notifier"/>
+    <ownedAttribute xmi:type="uml:Property" name="sendGridAPI" type="SendGridAPI"/>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- PATRÓN FACADE - Simplificación de Subsistemas -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Class" xmi:id="NotificationFacade" name="NotificationFacade">
+    <ownedAttribute xmi:type="uml:Property" name="notificationService" type="NotificationService"/>
+    <ownedAttribute xmi:type="uml:Property" name="notifierFactory" type="NotifierFactory"/>
+    <ownedOperation name="notifyScrimStateChange">
+      <ownedParameter name="scrim" type="Scrim"/>
+      <ownedParameter name="oldState" type="String"/>
+      <ownedParameter name="newState" type="String"/>
+    </ownedOperation>
+    <ownedOperation name="notifyNewScrim">
+      <ownedParameter name="scrim" type="Scrim"/>
+    </ownedOperation>
+    <ownedOperation name="notifyLobbyReady">
+      <ownedParameter name="scrim" type="Scrim"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- CONTROLADORES PARA TERMINAL/API -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Class" xmi:id="ScrimController" name="ScrimController">
+    <ownedAttribute xmi:type="uml:Property" name="scrimService" type="ScrimService"/>
+    <ownedOperation name="crearScrim">
+      <ownedParameter name="scrimDTO" type="ScrimDTO"/>
+    </ownedOperation>
+    <ownedOperation name="buscarScrims">
+      <ownedParameter name="filtros" type="String" upperValue="*"/>
+    </ownedOperation>
+    <ownedOperation name="postularAScrim">
+      <ownedParameter name="scrimId" type="UUID"/>
+      <ownedParameter name="usuarioId" type="UUID"/>
+      <ownedParameter name="rol" type="String"/>
+    </ownedOperation>
+    <ownedOperation name="confirmarParticipacion">
+      <ownedParameter name="scrimId" type="UUID"/>
+      <ownedParameter name="usuarioId" type="UUID"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="UsuarioController" name="UsuarioController">
+    <ownedAttribute xmi:type="uml:Property" name="usuarioService" type="UsuarioService"/>
+    <ownedOperation name="registrarUsuario">
+      <ownedParameter name="usuarioDTO" type="UsuarioDTO"/>
+    </ownedOperation>
+    <ownedOperation name="autenticarUsuario">
+      <ownedParameter name="username" type="String"/>
+      <ownedParameter name="password" type="String"/>
+    </ownedOperation>
+    <ownedOperation name="obtenerPerfil">
+      <ownedParameter name="usuarioId" type="UUID"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="MatchmakingController" name="MatchmakingController">
+    <ownedAttribute xmi:type="uml:Property" name="matchmakingService" type="MatchmakingService"/>
+    <ownedOperation name="ejecutarEmparejamiento">
+      <ownedParameter name="scrimId" type="UUID"/>
+    </ownedOperation>
+    <ownedOperation name="cambiarEstrategia">
+      <ownedParameter name="estrategiaTipo" type="String"/>
+    </ownedOperation>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- ENTIDADES PRINCIPALES DEL DOMINIO -->
+  <!-- ============================================= -->
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Scrim" name="Scrim">
+    <ownedAttribute xmi:type="uml:Property" name="id" type="UUID"/>
+    <ownedAttribute xmi:type="uml:Property" name="juego" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="formato" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="region" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="rangoMin" type="int"/>
+    <ownedAttribute xmi:type="uml:Property" name="rangoMax" type="int"/>
+    <ownedAttribute xmi:type="uml:Property" name="latenciaMax" type="int"/>
+    <ownedAttribute xmi:type="uml:Property" name="fechaHora" type="LocalDateTime"/>
+    <ownedAttribute xmi:type="uml:Property" name="duracion" type="int"/>
+    <ownedAttribute xmi:type="uml:Property" name="estado" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="postulaciones" type="Postulacion" upperValue="*"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Usuario" name="Usuario">
+    <ownedAttribute xmi:type="uml:Property" name="id" type="UUID"/>
+    <ownedAttribute xmi:type="uml:Property" name="username" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="email" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="passwordHash" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="rangosPorJuego" type="String" upperValue="*"/>
+    <ownedAttribute xmi:type="uml:Property" name="rolesPreferidos" type="String" upperValue="*"/>
+    <ownedAttribute xmi:type="uml:Property" name="region" type="String"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Postulacion" name="Postulacion">
+    <ownedAttribute xmi:type="uml:Property" name="id" type="UUID"/>
+    <ownedAttribute xmi:type="uml:Property" name="usuario" type="Usuario"/>
+    <ownedAttribute xmi:type="uml:Property" name="scrim" type="Scrim"/>
+    <ownedAttribute xmi:type="uml:Property" name="rolDeseado" type="String"/>
+    <ownedAttribute xmi:type="uml:Property" name="estado" type="String"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Confirmacion" name="Confirmacion">
+    <ownedAttribute xmi:type="uml:Property" name="id" type="UUID"/>
+    <ownedAttribute xmi:type="uml:Property" name="usuario" type="Usuario"/>
+    <ownedAttribute xmi:type="uml:Property" name="scrim" type="Scrim"/>
+    <ownedAttribute xmi:type="uml:Property" name="confirmado" type="boolean"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Class" xmi:id="Estadistica" name="Estadistica">
+    <ownedAttribute xmi:type="uml:Property" name="id" type="UUID"/>
+    <ownedAttribute xmi:type="uml:Property" name="scrim" type="Scrim"/>
+    <ownedAttribute xmi:type="uml:Property" name="usuario" type="Usuario"/>
+    <ownedAttribute xmi:type="uml:Property" name="mvp" type="boolean"/>
+    <ownedAttribute xmi:type="uml:Property" name="kda" type="double"/>
+    <ownedAttribute xmi:type="uml:Property" name="observaciones" type="String"/>
+  </packagedElement>
+
+  <!-- ============================================= -->
+  <!-- RELACIONES ENTRE CLASES -->
+  <!-- ============================================= -->
+
+  <!-- State Pattern Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="ScrimContext_ScrimState">
+    <memberEnd xmi:idref="ScrimContext_currentState"/>
+    <memberEnd xmi:idref="ScrimState_context"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="ScrimContext_currentState" type="ScrimContext" association="ScrimContext_ScrimState" aggregation="composite"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="ScrimState_context" type="ScrimState" association="ScrimContext_ScrimState"/>
+  </packagedElement>
+
+  <!-- Observer Pattern Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="DomainEventBus_EventSubscriber">
+    <memberEnd xmi:idref="DomainEventBus_subscribers"/>
+    <memberEnd xmi:idref="EventSubscriber_bus"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="DomainEventBus_subscribers" type="DomainEventBus" association="DomainEventBus_EventSubscriber" aggregation="shared"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="EventSubscriber_bus" type="EventSubscriber" association="DomainEventBus_EventSubscriber"/>
+  </packagedElement>
+
+  <!-- Strategy Pattern Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="MatchmakingService_MatchmakingStrategy">
+    <memberEnd xmi:idref="MatchmakingService_strategy"/>
+    <memberEnd xmi:idref="MatchmakingStrategy_service"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="MatchmakingService_strategy" type="MatchmakingService" association="MatchmakingService_MatchmakingStrategy"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="MatchmakingStrategy_service" type="MatchmakingStrategy" association="MatchmakingService_MatchmakingStrategy"/>
+  </packagedElement>
+
+  <!-- Composite Pattern Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="Team_TeamComponent">
+    <memberEnd xmi:idref="Team_members"/>
+    <memberEnd xmi:idref="TeamComponent_team"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Team_members" type="Team" association="Team_TeamComponent" aggregation="composite"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="TeamComponent_team" type="TeamComponent" association="Team_TeamComponent"/>
+  </packagedElement>
+
+  <!-- Decorator Pattern Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="NotifierDecorator_Notifier">
+    <memberEnd xmi:idref="NotifierDecorator_wrappedNotifier"/>
+    <memberEnd xmi:idref="Notifier_decorator"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="NotifierDecorator_wrappedNotifier" type="NotifierDecorator" association="NotifierDecorator_Notifier"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Notifier_decorator" type="Notifier" association="NotifierDecorator_Notifier"/>
+  </packagedElement>
+
+  <!-- Adapter Pattern Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="DiscordAdapter_DiscordAPI">
+    <memberEnd xmi:idref="DiscordAdapter_discordAPI"/>
+    <memberEnd xmi:idref="DiscordAPI_adapter"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="DiscordAdapter_discordAPI" type="DiscordAdapter" association="DiscordAdapter_DiscordAPI"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="DiscordAPI_adapter" type="DiscordAPI" association="DiscordAdapter_DiscordAPI"/>
+  </packagedElement>
+
+  <!-- Domain Relationships -->
+  <packagedElement xmi:type="uml:Association" xmi:id="Scrim_Postulacion">
+    <memberEnd xmi:idref="Scrim_postulaciones"/>
+    <memberEnd xmi:idref="Postulacion_scrim"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Scrim_postulaciones" type="Scrim" association="Scrim_Postulacion" aggregation="composite"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Postulacion_scrim" type="Postulacion" association="Scrim_Postulacion"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Association" xmi:id="Scrim_Confirmacion">
+    <memberEnd xmi:idref="Scrim_confirmaciones"/>
+    <memberEnd xmi:idref="Confirmacion_scrim"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Scrim_confirmaciones" type="Scrim" association="Scrim_Confirmacion" aggregation="composite"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Confirmacion_scrim" type="Confirmacion" association="Scrim_Confirmacion"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Association" xmi:id="Scrim_Estadistica">
+    <memberEnd xmi:idref="Scrim_estadisticas"/>
+    <memberEnd xmi:idref="Estadistica_scrim"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Scrim_estadisticas" type="Scrim" association="Scrim_Estadistica" aggregation="composite"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Estadistica_scrim" type="Estadistica" association="Scrim_Estadistica"/>
+  </packagedElement>
+
+  <packagedElement xmi:type="uml:Association" xmi:id="Postulacion_Usuario">
+    <memberEnd xmi:idref="Postulacion_usuario"/>
+    <memberEnd xmi:idref="Usuario_postulaciones"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Postulacion_usuario" type="Postulacion" association="Postulacion_Usuario"/>
+    <ownedEnd xmi:type="uml:Property" xmi:id="Usuario_postulaciones" type="Usuario" association="Postulacion_Usuario"/>
+  </packagedElement>
+
+  <!-- Service Dependencies -->
+  <packagedElement xmi:type="uml:Usage" xmi:id="MatchmakingService_Scrim" client="MatchmakingService" supplier="Scrim"/>
+  <packagedElement xmi:type="uml:Usage" xmi:id="MatchmakingService_Usuario" client="MatchmakingService" supplier="Usuario"/>
+  <packagedElement xmi:type="uml:Usage" xmi:id="NotificationService_Notifier" client="NotificationService" supplier="Notifier"/>
+
+</uml:Model>

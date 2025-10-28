@@ -1,0 +1,379 @@
+classDiagram
+    %% =============================================
+    %% PATRÓN STATE - Gestión de Estados del Scrim
+    %% =============================================
+    
+    class ScrimContext {
+        -ScrimState currentState
+        +setState(ScrimState state)
+        +postular(Usuario usuario, Rol rol)
+        +confirmar(Usuario usuario)
+        +iniciar()
+        +finalizar()
+        +cancelar()
+    }
+
+    class ScrimState {
+        <<interface>>
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    class BuscandoState {
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    class LobbyArmadoState {
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    class ConfirmadoState {
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    class EnJuegoState {
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    class FinalizadoState {
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    class CanceladoState {
+        +postular(ScrimContext context, Usuario usuario, Rol rol)
+        +confirmar(ScrimContext context, Usuario usuario)
+        +iniciar(ScrimContext context)
+        +finalizar(ScrimContext context)
+        +cancelar(ScrimContext context)
+    }
+
+    %% =============================================
+    %% PATRÓN OBSERVER - Sistema de Notificaciones
+    %% =============================================
+
+    class DomainEventBus {
+        -List~EventSubscriber~ subscribers
+        +subscribe(EventSubscriber subscriber)
+        +unsubscribe(EventSubscriber subscriber)
+        +publish(DomainEvent event)
+    }
+
+    class EventSubscriber {
+        <<interface>>
+        +onEvent(DomainEvent event)
+    }
+
+    class DomainEvent {
+        <<abstract>>
+        +String eventType
+        +LocalDateTime timestamp
+    }
+
+    class ScrimStateChangedEvent {
+        -UUID scrimId
+        -String previousState
+        -String newState
+    }
+
+    class NotificationService {
+        -DomainEventBus eventBus
+        -NotifierFactory notifierFactory
+        +sendNotification(Notification notification)
+    }
+
+    %% =============================================
+    %% PATRÓN STRATEGY - Estrategias de Emparejamiento
+    %% =============================================
+
+    class MatchmakingService {
+        -MatchmakingStrategy strategy
+        +setStrategy(MatchmakingStrategy strategy)
+        +executeMatchmaking(List~Usuario~ candidates, Scrim scrim)
+    }
+
+    class MatchmakingStrategy {
+        <<interface>>
+        +selectPlayers(List~Usuario~ candidates, Scrim scrim)
+    }
+
+    class ByMMRStrategy {
+        +selectPlayers(List~Usuario~ candidates, Scrim scrim)
+    }
+
+    class ByLatencyStrategy {
+        +selectPlayers(List~Usuario~ candidates, Scrim scrim)
+    }
+
+    class ByHistoryStrategy {
+        +selectPlayers(List~Usuario~ candidates, Scrim scrim)
+    }
+
+    %% =============================================
+    %% PATRÓN COMPOSITE - Estructura de Equipos
+    %% =============================================
+
+    class TeamComponent {
+        <<interface>>
+        +getPlayers()
+        +addPlayer(Usuario player)
+        +removePlayer(Usuario player)
+        +getAverageMMR()
+    }
+
+    class Player {
+        -String name
+        -double mmr
+        +getPlayers()
+        +getAverageMMR()
+    }
+
+    class Team {
+        -List~TeamComponent~ members
+        +getPlayers()
+        +addPlayer(Usuario player)
+        +removePlayer(Usuario player)
+        +getAverageMMR()
+    }
+
+    %% =============================================
+    %% PATRÓN DECORATOR - Notificaciones Mejoradas
+    %% =============================================
+
+    class Notifier {
+        <<interface>>
+        +send(Notification notification)
+    }
+
+    class BaseNotifier {
+        +send(Notification notification)
+    }
+
+    class NotifierDecorator {
+        <<abstract>>
+        -Notifier wrappedNotifier
+        +NotifierDecorator(Notifier notifier)
+        +send(Notification notification)
+    }
+
+    class RetryNotifier {
+        -int maxRetries
+        +send(Notification notification)
+    }
+
+    class LoggingNotifier {
+        +send(Notification notification)
+    }
+
+    %% =============================================
+    %% PATRÓN ADAPTER - Integraciones Externas
+    %% =============================================
+
+    class ExternalNotificationService {
+        <<interface>>
+        +sendMessage(String message, String recipient)
+    }
+
+    class DiscordAPI {
+        +sendToChannel(String channelId, String message)
+    }
+
+    class SendGridAPI {
+        +sendEmail(String to, String subject, String body)
+    }
+
+    class ConsoleNotifier {
+        +send(Notification notification)
+    }
+
+    class DiscordAdapter {
+        -DiscordAPI discordAPI
+        +send(Notification notification)
+    }
+
+    class EmailAdapter {
+        -SendGridAPI sendGridAPI
+        +send(Notification notification)
+    }
+
+    %% =============================================
+    %% PATRÓN FACADE - Simplificación de Subsistemas
+    %% =============================================
+
+    class NotificationFacade {
+        -NotificationService notificationService
+        -NotifierFactory notifierFactory
+        +notifyScrimStateChange(Scrim scrim, String oldState, String newState)
+        +notifyNewScrim(Scrim scrim)
+        +notifyLobbyReady(Scrim scrim)
+    }
+
+    %% =============================================
+    %% CONTROLADORES PARA TERMINAL/API
+    %% =============================================
+
+    class ScrimController {
+        -ScrimService scrimService
+        +crearScrim(ScrimDTO scrimDTO)
+        +buscarScrims(Map~String, String~ filtros)
+        +postularAScrim(UUID scrimId, UUID usuarioId, String rol)
+        +confirmarParticipacion(UUID scrimId, UUID usuarioId)
+    }
+
+    class UsuarioController {
+        -UsuarioService usuarioService
+        +registrarUsuario(UsuarioDTO usuarioDTO)
+        +autenticarUsuario(String username, String password)
+        +obtenerPerfil(UUID usuarioId)
+    }
+
+    class MatchmakingController {
+        -MatchmakingService matchmakingService
+        +ejecutarEmparejamiento(UUID scrimId)
+        +cambiarEstrategia(String estrategiaTipo)
+    }
+
+    %% =============================================
+    %% ENTIDADES PRINCIPALES DEL DOMINIO
+    %% =============================================
+
+    class Scrim {
+        -UUID id
+        -String juego
+        -String formato
+        -String region
+        -int rangoMin
+        -int rangoMax
+        -int latenciaMax
+        -LocalDateTime fechaHora
+        -int duracion
+        -String estado
+        -List~Postulacion~ postulaciones
+    }
+
+    class Usuario {
+        -UUID id
+        -String username
+        -String email
+        -String passwordHash
+        -Map~String, Double~ rangosPorJuego
+        -List~String~ rolesPreferidos
+        -String region
+    }
+
+    class Postulacion {
+        -UUID id
+        -Usuario usuario
+        -Scrim scrim
+        -String rolDeseado
+        -String estado
+    }
+
+    class Confirmacion {
+        -UUID id
+        -Usuario usuario
+        -Scrim scrim
+        -boolean confirmado
+    }
+
+    class Estadistica {
+        -UUID id
+        -Scrim scrim
+        -Usuario usuario
+        -boolean mvp
+        -double kda
+        -String observaciones
+    }
+
+    %% =============================================
+    %% RELACIONES ENTRE CLASES
+    %% =============================================
+
+    %% State Pattern Relationships
+    ScrimContext *--> ScrimState
+    ScrimState <|.. BuscandoState
+    ScrimState <|.. LobbyArmadoState
+    ScrimState <|.. ConfirmadoState
+    ScrimState <|.. EnJuegoState
+    ScrimState <|.. FinalizadoState
+    ScrimState <|.. CanceladoState
+
+    %% Observer Pattern Relationships
+    DomainEventBus o--> EventSubscriber
+    EventSubscriber <|.. NotificationService
+    DomainEvent <|-- ScrimStateChangedEvent
+    NotificationService --> DomainEventBus
+
+    %% Strategy Pattern Relationships
+    MatchmakingService --> MatchmakingStrategy
+    MatchmakingStrategy <|.. ByMMRStrategy
+    MatchmakingStrategy <|.. ByLatencyStrategy
+    MatchmakingStrategy <|.. ByHistoryStrategy
+
+    %% Composite Pattern Relationships
+    TeamComponent <|.. Player
+    TeamComponent <|.. Team
+    Team *--> TeamComponent
+
+    %% Decorator Pattern Relationships
+    Notifier <|.. BaseNotifier
+    Notifier <|.. NotifierDecorator
+    NotifierDecorator --> Notifier
+    NotifierDecorator <|-- RetryNotifier
+    NotifierDecorator <|-- LoggingNotifier
+
+    %% Adapter Pattern Relationships
+    ExternalNotificationService <|.. DiscordAdapter
+    ExternalNotificationService <|.. EmailAdapter
+    ExternalNotificationService <|.. ConsoleNotifier
+    DiscordAdapter --> DiscordAPI
+    EmailAdapter --> SendGridAPI
+    Notifier <|.. DiscordAdapter
+    Notifier <|.. EmailAdapter
+    Notifier <|.. ConsoleNotifier
+
+    %% Facade Pattern Relationships
+    NotificationFacade --> NotificationService
+    NotificationFacade --> NotifierFactory
+
+    %% Controller Relationships
+    ScrimController --> Scrim
+    UsuarioController --> Usuario
+    MatchmakingController --> MatchmakingService
+
+    %% Domain Relationships
+    Scrim --> ScrimContext
+    Scrim *--> Postulacion
+    Scrim *--> Confirmacion
+    Scrim *--> Estadistica
+    Postulacion --> Usuario
+    Confirmacion --> Usuario
+    Estadistica --> Usuario
+    Team --> Usuario
+
+    %% Service Dependencies
+    MatchmakingService --> Scrim
+    MatchmakingService --> Usuario
+    NotificationService --> Notifier

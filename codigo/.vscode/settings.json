@@ -1,0 +1,8 @@
+{
+    "java.project.sourcePaths": [
+        "src/interfaces",
+        "src/interface",
+        "interfaces",
+        "src"
+    ]
+}

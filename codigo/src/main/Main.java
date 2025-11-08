@@ -11,26 +11,26 @@ import interfaces.INotifier;
 
 public class Main {
     
-    // Constantes para mejorar la presentación
+    // Constantes para mejorar la presentacion
     private static final String SEPARATOR = "═══════════════════════════════════════════════════════════════════════════════";
     private static final String LINE = "───────────────────────────────────────────────────────────────────────────────";
     
     public static void main(String[] args) {
         printHeader();
         
-        // 1. Demostrar Patrón ADAPTER
+        // 1. Demostrar Patron ADAPTER
         demonstrateAdapterPattern();
         pause();
         
-        // 2. Demostrar Patrón ABSTRACT FACTORY
+        // 2. Demostrar Patron ABSTRACT FACTORY
         NotifierFactory factory = demonstrateAbstractFactoryPattern();
         pause();
         
-        // 3. Demostrar Patrón STATE y preparar el scrim
+        // 3. Demostrar Patron STATE y preparar el scrim
         Scrim scrim = demonstrateStatePattern(factory);
         pause();
         
-        // 4. Demostrar Patrón STRATEGY
+        // 4. Demostrar Patron STRATEGY
         demonstrateStrategyPattern(scrim);
         pause();
         
@@ -45,45 +45,45 @@ public class Main {
     }
     
     /**
-     * Imprime el encabezado principal de la aplicación
+     * Imprime el encabezado principal de la aplicacion
      */
     private static void printHeader() {
         System.out.println("\n" + SEPARATOR);
         System.out.println("╔═══════════════════════════════════════════════════════════════════════════════╗");
         System.out.println("║                                                                               ║");
         System.out.println("║                   eScrims - Plataforma de eSports                             ║");
-        System.out.println("║                   Demostración de Patrones de Diseño                          ║");
+        System.out.println("║                   Demostracion de Patrones de Diseño                          ║");
         System.out.println("║                                                                               ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
     }
     
     /**
-     * Imprime el pie de página
+     * Imprime el pie de pagina
      */
     private static void printFooter() {
         System.out.println("\n" + SEPARATOR);
         System.out.println("╔═══════════════════════════════════════════════════════════════════════════════╗");
         System.out.println("║                                                                               ║");
-        System.out.println("║                 DEMOSTRACIÓN COMPLETADA EXITOSAMENTE                          ║");
+        System.out.println("║                 DEMOSTRACION COMPLETADA EXITOSAMENTE                          ║");
         System.out.println("║                                                                               ║");
         System.out.println("║              Todos los patrones implementados:                                ║");
-        System.out.println("║              • Patrón ADAPTER                                                 ║");
-        System.out.println("║              • Patrón ABSTRACT FACTORY                                        ║");
-        System.out.println("║              • Patrón STATE                                                   ║");
-        System.out.println("║              • Patrón STRATEGY                                                ║");
-        System.out.println("║              • Patrón OBSERVER                                                ║");
+        System.out.println("║              • Patron ADAPTER                                                 ║");
+        System.out.println("║              • Patron ABSTRACT FACTORY                                        ║");
+        System.out.println("║              • Patron STATE                                                   ║");
+        System.out.println("║              • Patron STRATEGY                                                ║");
+        System.out.println("║              • Patron OBSERVER                                                ║");
         System.out.println("║                                                                               ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
     }
     
     /**
-     * Imprime el título de una sección
+     * Imprime el titulo de una seccion
      */
     private static void printSectionTitle(String patternNumber, String patternName, String description) {
         System.out.println("\n" + LINE);
-        System.out.println("[!!] DEMOSTRACIÓN " + patternNumber + ": PATRÓN " + patternName);
+        System.out.println("[!!] DEMOSTRACION " + patternNumber + ": PATRON " + patternName);
         System.out.println("   " + description);
         System.out.println(LINE + "\n");
     }
@@ -96,18 +96,18 @@ public class Main {
     }
     
     /**
-     * Demuestra el Patrón ADAPTER - Autenticación múltiple
+     * Demuestra el Patron ADAPTER - Autenticacion multiple
      */
     private static void demonstrateAdapterPattern() {
-        printSectionTitle("1", "ADAPTER", "Integración de múltiples sistemas de autenticación");
+        printSectionTitle("1", "ADAPTER", "Integracion de multiples sistemas de autenticacion");
         
         AuthService authService = new AuthService();
         AuthController authController = new AuthController(authService);
         
         System.out.println("[!] Autenticando usuarios con diferentes proveedores...\n");
         
-        // Autenticación local
-        System.out.println("[*] Autenticación LOCAL:");
+        // Autenticacion local
+        System.out.println("[*] Autenticacion LOCAL:");
         Usuario user1 = authController.login("shadowblade@esports.com", "pass123");
         System.out.println("   [+] Usuario autenticado: " + user1.getUsername());
         System.out.println("   [+] Email: " + user1.getEmail());
@@ -118,8 +118,8 @@ public class Main {
         System.out.println("   [+] Email: " + user2.getEmail());
         System.out.println();
         
-        // Autenticación con Google
-        System.out.println("[*] Autenticación GOOGLE OAuth:");
+        // Autenticacion con Google
+        System.out.println("[*] Autenticacion GOOGLE OAuth:");
         Usuario user3 = authController.loginWithProvider("google", "google-token-abc123");
         System.out.println("   [+] Usuario Google: " + user3.getUsername());
         System.out.println("   [+] Email: " + user3.getEmail());
@@ -133,10 +133,10 @@ public class Main {
     }
     
     /**
-     * Demuestra el Patrón ABSTRACT FACTORY - Creación de notificadores
+     * Demuestra el Patron ABSTRACT FACTORY - Creacion de notificadores
      */
     private static NotifierFactory demonstrateAbstractFactoryPattern() {
-        printSectionTitle("2", "ABSTRACT FACTORY", "Creación de familias de notificadores");
+        printSectionTitle("2", "ABSTRACT FACTORY", "Creacion de familias de notificadores");
         
         System.out.println("[!] Creando notificadores mediante Abstract Factory...\n");
         
@@ -160,12 +160,12 @@ public class Main {
     }
     
     /**
-     * Demuestra el Patrón STATE - Estados del scrim
+     * Demuestra el Patron STATE - Estados del scrim
      */
     private static Scrim demonstrateStatePattern(NotifierFactory factory) {
-        printSectionTitle("3", "STATE & OBSERVER", "Gestión de estados y notificaciones del Scrim");
+        printSectionTitle("3", "STATE & OBSERVER", "Gestion de estados y notificaciones del Scrim");
         
-        System.out.println("[!] Creando nuevo Scrim (Partida de práctica)...\n");
+        System.out.println("[!] Creando nuevo Scrim (Partida de practica)...\n");
         
         // Crear scrim con estado inicial
         ScrimState estadoInicial = new EstadoBuscandoJugadores();
@@ -173,7 +173,7 @@ public class Main {
         System.out.println("[*] Estado inicial: " + estadoInicial.getClass().getSimpleName());
         System.out.println();
         
-        // Agregar notificadores (patrón OBSERVER)
+        // Agregar notificadores (patron OBSERVER)
         System.out.println("[*] Suscribiendo observadores (notificadores) al Scrim:");
         scrim.addNotifier(factory.createEmailNotifier());
         scrim.addNotifier(factory.createDiscordNotifier());
@@ -184,7 +184,7 @@ public class Main {
         ScrimContext context = new ScrimContext(scrim, estadoInicial);
         
         // Crear jugadores
-        System.out.println("[!] Jugadores registrándose para Scrim 5v5:\n");
+        System.out.println("[!] Jugadores registrandose para Scrim 5v5:\n");
         
         Usuario[] jugadores = {
             new Usuario(1, "ShadowBlade", "shadow@esports.com"),
@@ -213,7 +213,7 @@ public class Main {
     }
     
     /**
-     * Demuestra el Patrón STRATEGY - Matchmaking con diferentes estrategias
+     * Demuestra el Patron STRATEGY - Matchmaking con diferentes estrategias
      */
     private static void demonstrateStrategyPattern(Scrim scrim) {
         printSectionTitle("4", "STRATEGY", "Algoritmos de matchmaking intercambiables");
@@ -239,7 +239,7 @@ public class Main {
         mmService.ejecutarEmparejamiento(scrim);
         System.out.println();
         
-        System.out.println("[!] Matchmaking completado - Estrategia aplicada dinámicamente");
+        System.out.println("[!] Matchmaking completado - Estrategia aplicada dinamicamente");
     }
     
     /**
@@ -254,34 +254,34 @@ public class Main {
         System.out.println("[*] Estado actual: " + scrim.getEstado().getClass().getSimpleName());
         System.out.println();
         
-        // Transición 1: Iniciar
-        System.out.println("[*] ACCIÓN: Iniciar scrim");
-        System.out.println("   Todos los jugadores confirmaron su participación");
+        // Transicion 1: Iniciar
+        System.out.println("[*] ACCION: Iniciar scrim");
+        System.out.println("   Todos los jugadores confirmaron su participacion");
         scrim.getEstado().iniciar(scrim);
         System.out.println("   [+] Nuevo estado: " + scrim.getEstado().getClass().getSimpleName());
         System.out.println();
         
-        // Transición 2: Iniciar nuevamente (partida en curso)
-        System.out.println("[*] ACCIÓN: La partida está en curso");
-        System.out.println("   Los jugadores están compitiendo...");
+        // Transicion 2: Iniciar nuevamente (partida en curso)
+        System.out.println("[*] ACCION: La partida esta en curso");
+        System.out.println("   Los jugadores estan compitiendo...");
         scrim.getEstado().iniciar(scrim);
         System.out.println("   [+] Estado: " + scrim.getEstado().getClass().getSimpleName());
         System.out.println();
         
-        // Transición 3: Intentar cancelar (desde EnJuego)
-        System.out.println("[*] ACCIÓN: Intentar cancelar partida en curso");
+        // Transicion 3: Intentar cancelar (desde EnJuego)
+        System.out.println("[*] ACCION: Intentar cancelar partida en curso");
         System.out.println("   (No se puede cancelar una partida activa)");
         scrim.getEstado().cancelar(scrim);
         System.out.println("   [+] Estado final: " + scrim.getEstado().getClass().getSimpleName());
 
-        System.out.println("\n[!] Transiciones de estado manejadas correctamente mediante patrón STATE");
+        System.out.println("\n[!] Transiciones de estado manejadas correctamente mediante patron STATE");
     }
     
     /**
      * Demuestra el modelo de dominio completo
      */
     private static void demonstrateDomainModel(Scrim scrim) {
-        printSectionTitle("6", "DOMAIN MODEL", "Equipos, Confirmaciones y Estadísticas");
+        printSectionTitle("6", "DOMAIN MODEL", "Equipos, Confirmaciones y Estadisticas");
         
         // Crear jugadores para el modelo de dominio
         Usuario[] players = {
@@ -296,7 +296,7 @@ public class Main {
         };
         
         // === EQUIPOS ===
-        System.out.println("FORMACIÓN DE EQUIPOS\n");
+        System.out.println("FORMACION DE EQUIPOS\n");
         
         Equipo equipoAzul = new Equipo("[ («..») ] Team Azure");
         Equipo equipoRojo = new Equipo("[ (*,,°) ] Team Crimson");
@@ -320,7 +320,7 @@ public class Main {
         
         // === CONFIRMACIONES ===
         System.out.println(LINE);
-        System.out.println("[+] CONFIRMACIONES DE PARTICIPACIÓN\n");
+        System.out.println("[+] CONFIRMACIONES DE PARTICIPACION\n");
         
         Confirmacion[] confirmaciones = new Confirmacion[8];
         
@@ -349,17 +349,17 @@ public class Main {
         System.out.println("   [/] Resumen: " + confirmados + " confirmados, " + rechazados + " rechazados");
         System.out.println();
         
-        // === ESTADÍSTICAS ===
+        // === ESTADiSTICAS ===
         System.out.println(LINE);
-        System.out.println("[!] ESTADÍSTICAS POST-PARTIDA\n");
+        System.out.println("[!] ESTADISTICAS POST-PARTIDA\n");
         
-        // Datos de estadísticas más realistas
+        // Datos de estadisticas mas realistas
         int[][] stats = {
             {18, 12, 7},   // ShadowBlade - MVP
             {14, 15, 9},   // PhoenixFire
-            {10, 18, 12},  // IceQueen - Más muertes
-            {22, 10, 15},  // ThunderStrike - Más kills
-            {16, 14, 20},  // NightHawk - Más asistencias
+            {10, 18, 12},  // IceQueen - Mas muertes
+            {22, 10, 15},  // ThunderStrike - Mas kills
+            {16, 14, 20},  // NightHawk - Mas asistencias
             {8, 16, 6},    // DragonSlayer
             {12, 13, 11},  // SilentAssassin
             {11, 14, 8}    // MysticWizard
@@ -369,12 +369,12 @@ public class Main {
         
         System.out.println("[*] Rendimiento individual de jugadores:\n");
         
-        // Crear y mostrar estadísticas
+        // Crear y mostrar estadisticas
         for (int i = 0; i < 8; i++) {
             estadisticas[i] = new Estadistica(players[i], scrim, stats[i][0], stats[i][1], stats[i][2]);
         }
         
-        // Mostrar tabla de estadísticas
+        // Mostrar tabla de estadisticas
         System.out.println("   ╔═════════════════════╦═══════╦═══════╦═══════╦════════════╗");
         System.out.println("   ║ Jugador             ║ Kills ║ Death ║ Asist ║ KDA Ratio  ║");
         System.out.println("   ╠═════════════════════╬═══════╬═══════╬═══════╬════════════╣");
@@ -393,13 +393,13 @@ public class Main {
         System.out.println();
         
         // Mostrar calificaciones de rendimiento
-        System.out.println("   [+] Calificación de rendimiento por jugador:");
+        System.out.println("   [+] Calificacion de rendimiento por jugador:");
         for (int i = 0; i < 8; i++) {
             System.out.println("      • " + players[i].getUsername() + ": " + estadisticas[i].obtenerRendimiento());
         }
         System.out.println();
         
-        // Encontrar MVP (usando el KDA numérico)
+        // Encontrar MVP (usando el KDA numerico)
         double maxKDA = 0;
         int mvpIndex = 0;
         for (int i = 0; i < 8; i++) {
@@ -424,6 +424,6 @@ public class Main {
         System.out.println("       Score: Azure " + killsAzul + " - " + killsRojo + " Crimson");
         System.out.println();
         
-        System.out.println("[!] Modelo de dominio completo demostrado (Equipos, Confirmaciones, Estadísticas)");
+        System.out.println("[!] Modelo de dominio completo demostrado (Equipos, Confirmaciones, Estadisticas)");
     }
 }

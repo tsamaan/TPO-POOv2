@@ -8,6 +8,10 @@ import service.*;
 import auth.*;
 import context.ScrimContext;
 import interfaces.INotifier;
+import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class Main {
     
@@ -15,33 +19,28 @@ public class Main {
     private static final String SEPARATOR = "═══════════════════════════════════════════════════════════════════════════════";
     private static final String LINE = "───────────────────────────────────────────────────────────────────────────────";
     
+    // Scanner global para input del usuario
+    private static Scanner scanner = new Scanner(System.in);
+    
+    // Lista de jugadores bot para simular matchmaking
+    private static final String[] BOT_NAMES = {
+        "ShadowBlade", "PhoenixFire", "IceQueen", "ThunderStrike", 
+        "NightHawk", "DragonSlayer", "SilentAssassin", "MysticWizard",
+        "CyberNinja", "StormRider", "LunarEclipse", "BlazeFury",
+        "FrostBite", "VenomStrike", "GhostRecon", "ZenMaster"
+    };
+    
+    private static final String[] ROLES = {
+        "Duelist", "Support", "Controller", "Initiator", "Sentinel"
+    };
+    
     public static void main(String[] args) {
         printHeader();
         
-        // 1. Demostrar Patron ADAPTER
-        demonstrateAdapterPattern();
-        pause();
+        // Modo interactivo: Login y matchmaking
+        interactiveMatchmaking();
         
-        // 2. Demostrar Patron ABSTRACT FACTORY
-        NotifierFactory factory = demonstrateAbstractFactoryPattern();
-        pause();
-        
-        // 3. Demostrar Patron STATE y preparar el scrim
-        Scrim scrim = demonstrateStatePattern(factory);
-        pause();
-        
-        // 4. Demostrar Patron STRATEGY
-        demonstrateStrategyPattern(scrim);
-        pause();
-        
-        // 5. Demostrar ciclo completo de estados
-        demonstrateStateTransitions(scrim);
-        pause();
-        
-        // 6. Demostrar modelo de dominio completo
-        demonstrateDomainModel(scrim);
-        
-        printFooter();
+        scanner.close();
     }
     
     /**
@@ -56,6 +55,391 @@ public class Main {
         System.out.println("║                                                                               ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
+    }
+    
+    /**
+     * Sistema interactivo de matchmaking
+     */
+    private static void interactiveMatchmaking() {
+        // 1. Login del usuario
+        Usuario usuarioActual = loginUsuario();
+        System.out.println();
+        
+        // 2. Menu principal
+        boolean enJuego = true;
+        while (enJuego) {
+            mostrarMenuPrincipal(usuarioActual);
+            String opcion = scanner.nextLine().trim();
+            
+            switch (opcion) {
+                case "1":
+                    buscarPartida(usuarioActual);
+                    break;
+                case "2":
+                    System.out.println("\n[!] Saliendo de eScrims...");
+                    System.out.println("[+] ¡Hasta pronto, " + usuarioActual.getUsername() + "!");
+                    enJuego = false;
+                    break;
+                default:
+                    System.out.println("\n[!] Opción inválida. Intenta nuevamente.");
+                    break;
+            }
+        }
+    }
+    
+    /**
+     * Login interactivo del usuario
+     */
+    private static Usuario loginUsuario() {
+        System.out.println(LINE);
+        System.out.println("[!] LOGIN - Sistema de Autenticación");
+        System.out.println(LINE + "\n");
+        
+        System.out.print("[>] Ingresa tu nombre de usuario: ");
+        String username = scanner.nextLine().trim();
+        
+        System.out.print("[>] Ingresa tu email: ");
+        String email = scanner.nextLine().trim();
+        
+        System.out.print("[>] Ingresa tu contraseña: ");
+        String password = scanner.nextLine().trim();
+        
+        // Autenticar usando el patrón Adapter
+        AuthService authService = new AuthService();
+        AuthController authController = new AuthController(authService);
+        Usuario usuario = authController.login(email, password);
+        
+        // Actualizar username si el usuario lo ingresó
+        if (!username.isEmpty()) {
+            usuario = new Usuario(usuario.getId(), username, usuario.getEmail());
+        }
+        
+        System.out.println("\n[+] ¡Bienvenido, " + usuario.getUsername() + "!");
+        System.out.println("[+] Email: " + usuario.getEmail());
+        
+        return usuario;
+    }
+    
+    /**
+     * Muestra el menu principal
+     */
+    private static void mostrarMenuPrincipal(Usuario usuario) {
+        System.out.println("\n" + LINE);
+        System.out.println("[!] MENU PRINCIPAL - " + usuario.getUsername());
+        System.out.println(LINE);
+        System.out.println("\n[1] Buscar Partida (Scrim)");
+        System.out.println("[2] Salir");
+        System.out.print("\n[>] Selecciona una opción: ");
+    }
+    
+    /**
+     * Sistema de búsqueda de partida con matchmaking
+     */
+    private static void buscarPartida(Usuario usuarioActual) {
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("[!] BUSCANDO PARTIDA...");
+        System.out.println(SEPARATOR + "\n");
+        
+        // Seleccionar rol
+        String rolSeleccionado = seleccionarRol();
+        
+        // Crear sistema de notificaciones (Patrón Abstract Factory)
+        System.out.println("\n[*] Inicializando sistema de notificaciones...");
+        NotifierFactory factory = new SimpleNotifierFactory();
+        INotifier emailNotifier = factory.createEmailNotifier();
+        INotifier discordNotifier = factory.createDiscordNotifier();
+        INotifier pushNotifier = factory.createPushNotifier();
+        System.out.println("[+] Sistema de notificaciones activo");
+        
+        // Crear nuevo scrim (Patrón State)
+        System.out.println("\n[*] Creando nueva sala de matchmaking...");
+        ScrimState estadoInicial = new EstadoBuscandoJugadores();
+        Scrim scrim = new Scrim(estadoInicial);
+        
+        // Agregar notificadores (Patrón Observer)
+        scrim.addNotifier(emailNotifier);
+        scrim.addNotifier(discordNotifier);
+        scrim.addNotifier(pushNotifier);
+        
+        ScrimContext context = new ScrimContext(scrim, estadoInicial);
+        System.out.println("[+] Sala creada - Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        // Postular al usuario actual
+        System.out.println("\n[*] Registrando tu postulación...");
+        context.postular(usuarioActual, rolSeleccionado);
+        System.out.println("[+] ¡Te has unido a la cola de matchmaking!");
+        System.out.println("[+] Rol seleccionado: " + rolSeleccionado);
+        
+        // Simular búsqueda de otros jugadores
+        System.out.println("\n" + LINE);
+        System.out.println("[!] BUSCANDO JUGADORES... (se necesitan 8 jugadores en total)");
+        System.out.println(LINE + "\n");
+        
+        List<Usuario> jugadoresEncontrados = new ArrayList<>();
+        jugadoresEncontrados.add(usuarioActual);
+        
+        Random random = new Random();
+        int jugadoresNecesarios = 8;
+        
+        // Simular la búsqueda progresiva
+        for (int i = 1; i < jugadoresNecesarios; i++) {
+            try {
+                Thread.sleep(1500); // Simular tiempo de búsqueda
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            // Crear jugador bot
+            String botName = BOT_NAMES[i];
+            String botEmail = botName.toLowerCase() + "@esports.com";
+            Usuario bot = new Usuario(i + 1, botName, botEmail);
+            String botRol = ROLES[random.nextInt(ROLES.length)];
+            
+            jugadoresEncontrados.add(bot);
+            context.postular(bot, botRol);
+            
+            System.out.println("[" + (i + 1) + "/8] Jugador encontrado: " + botName + " (" + botRol + ")");
+        }
+        
+        // Ejecutar matchmaking (Patrón Strategy)
+        System.out.println("\n" + LINE);
+        System.out.println("[!] ¡LOBBY COMPLETO! Ejecutando matchmaking...");
+        System.out.println(LINE + "\n");
+        
+        System.out.println("[*] Aplicando algoritmo de emparejamiento por MMR...");
+        MatchmakingService mmService = new MatchmakingService(new ByMMRStrategy());
+        mmService.ejecutarEmparejamiento(scrim);
+        System.out.println("[+] Estado actual: " + scrim.getEstado().getClass().getSimpleName());
+        
+        // Formar equipos
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("[!] FORMANDO EQUIPOS");
+        System.out.println(SEPARATOR + "\n");
+        
+        Equipo equipoAzul = new Equipo("Team Azure");
+        Equipo equipoRojo = new Equipo("Team Crimson");
+        
+        // Asignar jugadores a equipos
+        for (int i = 0; i < jugadoresEncontrados.size(); i++) {
+            if (i < 4) {
+                equipoAzul.asignarJugador(jugadoresEncontrados.get(i));
+            } else {
+                equipoRojo.asignarJugador(jugadoresEncontrados.get(i));
+            }
+        }
+        
+        // Mostrar equipos
+        System.out.println("╔═══════════════════════════════════════════════════════════════╗");
+        System.out.println("║                      EQUIPOS FORMADOS                         ║");
+        System.out.println("╠═══════════════════════════════════════════════════════════════╣");
+        System.out.println("║                                                               ║");
+        System.out.println("║  " + String.format("%-59s", equipoAzul.getLado()) + "║");
+        for (Usuario jugador : equipoAzul.getJugadores()) {
+            String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? " ★ " : "   ";
+            System.out.println("║  " + marker + String.format("%-56s", jugador.getUsername()) + "║");
+        }
+        System.out.println("║                                                               ║");
+        System.out.println("╠═══════════════════════════════════════════════════════════════╣");
+        System.out.println("║                                                               ║");
+        System.out.println("║  " + String.format("%-59s", equipoRojo.getLado()) + "║");
+        for (Usuario jugador : equipoRojo.getJugadores()) {
+            String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? " ★ " : "   ";
+            System.out.println("║  " + marker + String.format("%-56s", jugador.getUsername()) + "║");
+        }
+        System.out.println("║                                                               ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════╝");
+        System.out.println("\n[★] Indica tu posición en el equipo\n");
+        
+        // Proceso de confirmación
+        procesarConfirmaciones(usuarioActual, jugadoresEncontrados, scrim);
+        
+        // Iniciar partida
+        iniciarPartida(scrim, equipoAzul, equipoRojo, jugadoresEncontrados);
+    }
+    
+    /**
+     * Permite al usuario seleccionar su rol
+     */
+    private static String seleccionarRol() {
+        System.out.println("\n[!] Selecciona tu rol preferido:");
+        System.out.println();
+        for (int i = 0; i < ROLES.length; i++) {
+            System.out.println("[" + (i + 1) + "] " + ROLES[i]);
+        }
+        System.out.print("\n[>] Ingresa el número de tu rol: ");
+        
+        int seleccion = -1;
+        try {
+            seleccion = Integer.parseInt(scanner.nextLine().trim());
+            if (seleccion >= 1 && seleccion <= ROLES.length) {
+                return ROLES[seleccion - 1];
+            }
+        } catch (NumberFormatException e) {
+            // Continuar con rol por defecto
+        }
+        
+        // Rol por defecto si la selección es inválida
+        System.out.println("[!] Selección inválida, asignando rol: " + ROLES[0]);
+        return ROLES[0];
+    }
+    
+    /**
+     * Procesa las confirmaciones de los jugadores
+     */
+    private static void procesarConfirmaciones(Usuario usuarioActual, List<Usuario> jugadores, Scrim scrim) {
+        System.out.println(LINE);
+        System.out.println("[!] FASE DE CONFIRMACIÓN");
+        System.out.println(LINE + "\n");
+        
+        System.out.println("[*] Los jugadores están confirmando su participación...\n");
+        
+        List<Confirmacion> confirmaciones = new ArrayList<>();
+        Random random = new Random();
+        
+        for (Usuario jugador : jugadores) {
+            Confirmacion conf = new Confirmacion(jugador, scrim);
+            
+            if (jugador.getUsername().equals(usuarioActual.getUsername())) {
+                // El usuario actual confirma manualmente
+                System.out.print("[>] ¿Confirmas tu participación? (S/N): ");
+                String respuesta = scanner.nextLine().trim().toUpperCase();
+                
+                if (respuesta.equals("S") || respuesta.equals("SI") || respuesta.isEmpty()) {
+                    conf.confirmar();
+                } else {
+                    conf.rechazar();
+                }
+            } else {
+                // Los bots confirman automáticamente (95% de probabilidad)
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                
+                if (random.nextInt(100) < 95) {
+                    conf.confirmar();
+                } else {
+                    conf.rechazar();
+                }
+                System.out.println("   [+] " + jugador.getUsername() + ": " + 
+                                 (conf.isConfirmado() ? "CONFIRMADO" : "RECHAZADO"));
+            }
+            
+            confirmaciones.add(conf);
+        }
+        
+        // Resumen
+        long confirmados = confirmaciones.stream().filter(Confirmacion::isConfirmado).count();
+        System.out.println("\n[!] Confirmaciones: " + confirmados + "/" + jugadores.size());
+        
+        if (confirmados == jugadores.size()) {
+            System.out.println("[+] ¡Todos los jugadores confirmaron! Iniciando partida...");
+        }
+    }
+    
+    /**
+     * Inicia la partida y muestra estadísticas finales
+     */
+    private static void iniciarPartida(Scrim scrim, Equipo equipoAzul, Equipo equipoRojo, List<Usuario> jugadores) {
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("[!] INICIANDO PARTIDA...");
+        System.out.println(SEPARATOR + "\n");
+        
+        // Transiciones de estado
+        scrim.getEstado().iniciar(scrim);
+        System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        System.out.println("\n[*] La partida está en curso...");
+        System.out.println("[*] Duración estimada: 25-30 minutos");
+        
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        scrim.getEstado().iniciar(scrim);
+        System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        // Simular fin de partida
+        System.out.println("\n[*] Simulando fin de partida...\n");
+        
+        try {
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        scrim.getEstado().cancelar(scrim);
+        System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        // Generar estadísticas
+        mostrarEstadisticas(jugadores, scrim, equipoAzul, equipoRojo);
+    }
+    
+    /**
+     * Muestra las estadísticas post-partida
+     */
+    private static void mostrarEstadisticas(List<Usuario> jugadores, Scrim scrim, Equipo equipoAzul, Equipo equipoRojo) {
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("[!] ESTADÍSTICAS POST-PARTIDA");
+        System.out.println(SEPARATOR + "\n");
+        
+        Random random = new Random();
+        List<Estadistica> estadisticas = new ArrayList<>();
+        
+        // Generar estadísticas para cada jugador
+        for (Usuario jugador : jugadores) {
+            int kills = 5 + random.nextInt(18);
+            int deaths = 8 + random.nextInt(12);
+            int assists = 3 + random.nextInt(15);
+            
+            Estadistica stat = new Estadistica(jugador, scrim, kills, deaths, assists);
+            estadisticas.add(stat);
+        }
+        
+        // Mostrar tabla
+        System.out.println("╔═══════════════════╦═══════╦═══════╦═══════╦════════════╗");
+        System.out.println("║ Jugador           ║ Kills ║ Death ║ Asist ║ KDA Ratio  ║");
+        System.out.println("╠═══════════════════╬═══════╬═══════╬═══════╬════════════╣");
+        
+        for (Estadistica stat : estadisticas) {
+            String nombre = String.format("%-17s", stat.getUsuario().getUsername());
+            String kills = String.format("%5d", stat.getKills());
+            String deaths = String.format("%5d", stat.getDeaths());
+            String assists = String.format("%5d", stat.getAssists());
+            String kda = String.format("%10.2f", stat.getKda());
+            
+            System.out.println("║ " + nombre + " ║ " + kills + " ║ " + deaths + " ║ " + assists + " ║ " + kda + " ║");
+        }
+        
+        System.out.println("╚═══════════════════╩═══════╩═══════╩═══════╩════════════╝");
+        
+        // Determinar MVP
+        Estadistica mvp = estadisticas.stream()
+            .max((a, b) -> Double.compare(a.getKda(), b.getKda()))
+            .orElse(estadisticas.get(0));
+        
+        System.out.println("\n[★] MVP: " + mvp.getUsuario().getUsername());
+        System.out.println("    " + mvp.obtenerRendimiento());
+        
+        // Determinar ganador
+        int killsAzul = 0, killsRojo = 0;
+        for (int i = 0; i < estadisticas.size(); i++) {
+            if (i < 4) {
+                killsAzul += estadisticas.get(i).getKills();
+            } else {
+                killsRojo += estadisticas.get(i).getKills();
+            }
+        }
+        
+        System.out.println("\n[!] RESULTADO FINAL:");
+        System.out.println("    " + equipoAzul.getLado() + ": " + killsAzul + " kills");
+        System.out.println("    " + equipoRojo.getLado() + ": " + killsRojo + " kills");
+        System.out.println("\n[★] GANADOR: " + (killsAzul > killsRojo ? equipoAzul.getLado() : equipoRojo.getLado()));
+        
+        System.out.println("\n[+] Partida finalizada. Volviendo al menú principal...");
     }
     
     /**

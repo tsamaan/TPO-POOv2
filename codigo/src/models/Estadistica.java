@@ -5,6 +5,7 @@ import java.util.UUID;
 /**
  * Clase Estadistica - Registra estadísticas de rendimiento de un jugador en un Scrim
  * Calcula KDA y proporciona análisis de rendimiento
+ * RF8: Estadísticas y feedback
  */
 public class Estadistica {
     private UUID id;
@@ -14,7 +15,20 @@ public class Estadistica {
     private int deaths;
     private int assists;
     private double kda;
+    
+    // RF8: MVP y rating
+    private boolean mvp;              // ¿Es el MVP de la partida?
+    private double rating;            // Rating/valoración del jugador (0-10)
+    private String comentario;        // Comentario opcional sobre el desempeño
+    private EstadoComentario estadoComentario; // Estado de moderación del comentario
 
+    // Enum para moderación de comentarios (RF8)
+    public enum EstadoComentario {
+        PENDIENTE,
+        APROBADO,
+        RECHAZADO
+    }
+    
     public Estadistica(Usuario usuario, Scrim scrim) {
         this.id = UUID.randomUUID();
         this.usuario = usuario;
@@ -23,6 +37,9 @@ public class Estadistica {
         this.deaths = 0;
         this.assists = 0;
         this.kda = 0.0;
+        this.mvp = false;
+        this.rating = 0.0;
+        this.estadoComentario = EstadoComentario.PENDIENTE;
     }
 
     public Estadistica(Usuario usuario, Scrim scrim, int kills, int deaths, int assists) {
@@ -33,6 +50,9 @@ public class Estadistica {
         this.deaths = deaths;
         this.assists = assists;
         this.kda = calcularKDA();
+        this.mvp = false;
+        this.rating = 0.0;
+        this.estadoComentario = EstadoComentario.PENDIENTE;
     }
 
     public double calcularKDA() {
@@ -125,6 +145,46 @@ public class Estadistica {
     public double getKda() {
         return kda;
     }
+    
+    // RF8: Getters y setters para MVP y rating
+    public boolean isMvp() {
+        return mvp;
+    }
+    
+    public void setMvp(boolean mvp) {
+        this.mvp = mvp;
+    }
+    
+    public double getRating() {
+        return rating;
+    }
+    
+    public void setRating(double rating) {
+        if (rating >= 0 && rating <= 10) {
+            this.rating = rating;
+        }
+    }
+    
+    public String getComentario() {
+        return comentario;
+    }
+    
+    public void setComentario(String comentario) {
+        this.comentario = comentario;
+        this.estadoComentario = EstadoComentario.PENDIENTE; // Requiere moderación
+    }
+    
+    public EstadoComentario getEstadoComentario() {
+        return estadoComentario;
+    }
+    
+    public void aprobarComentario() {
+        this.estadoComentario = EstadoComentario.APROBADO;
+    }
+    
+    public void rechazarComentario() {
+        this.estadoComentario = EstadoComentario.RECHAZADO;
+    }
 
     @Override
     public String toString() {
@@ -132,6 +192,8 @@ public class Estadistica {
                "usuario=" + usuario.getUsername() +
                ", K/D/A=" + kills + "/" + deaths + "/" + assists +
                ", KDA=" + String.format("%.2f", kda) +
+               ", MVP=" + (mvp ? "★" : "-") +
+               ", Rating=" + String.format("%.1f", rating) +
                ", rendimiento=" + obtenerRendimiento() +
                '}';
     }

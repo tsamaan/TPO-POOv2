@@ -1,4 +1,4 @@
-# 🎯 Explicación Detallada de Patrones Implementados
+#  Explicación Detallada de Patrones Implementados
 
 ## Proyecto: eScrims - Plataforma de Matchmaking para eSports
 
@@ -10,7 +10,7 @@ Este documento explica en detalle cada uno de los 5 patrones de diseño implemen
 
 ---
 
-## 📑 Índice de Patrones
+##  Índice de Patrones
 
 1. [Patrón STATE](#1-patrón-state)
 2. [Patrón STRATEGY](#2-patrón-strategy)
@@ -22,7 +22,7 @@ Este documento explica en detalle cada uno de los 5 patrones de diseño implemen
 
 # 1. Patrón STATE
 
-## 🎯 ¿Qué problema resuelve?
+## ¿Qué problema resuelve?
 
 Un **Scrim** (partida de práctica) pasa por múltiples estados durante su ciclo de vida: desde que se crea, se llenan los cupos, se confirman los jugadores, se juega la partida, hasta que finaliza o se cancela. Cada estado tiene comportamientos diferentes ante las mismas acciones.
 
@@ -30,7 +30,7 @@ Un **Scrim** (partida de práctica) pasa por múltiples estados durante su ciclo
 
 ---
 
-## 🔧 ¿Cómo se implementó?
+##  ¿Cómo se implementó?
 
 ### Estructura de Archivos
 
@@ -186,7 +186,7 @@ public class ScrimContext {
 
 ---
 
-## 📝 Comentarios Adicionales
+##  Comentarios Adicionales
 
 ### Diagrama de Transiciones
 ```
@@ -225,7 +225,7 @@ ctx.postular(usuario5, "Healer");   // ❌ Rechazado (lobby lleno)
 
 # 2. Patrón STRATEGY
 
-## 🎯 ¿Qué problema resuelve?
+## ¿Qué problema resuelve?
 
 El sistema necesita **emparejar jugadores** para los scrims, pero existen diferentes criterios de emparejamiento:
 - Por **nivel de habilidad (MMR)**: Juntar jugadores de rangos similares
@@ -236,7 +236,7 @@ El sistema necesita **emparejar jugadores** para los scrims, pero existen difere
 
 ---
 
-## 🔧 ¿Cómo se implementó?
+##  ¿Cómo se implementó?
 
 ### Estructura de Archivos
 
@@ -346,7 +346,7 @@ public class MatchmakingService {
 
 ---
 
-## 📍 ¿Dónde se implementó?
+## ¿Dónde se implementó?
 
 | Componente | Ubicación | Rol |
 |------------|-----------|-----|
@@ -357,7 +357,7 @@ public class MatchmakingService {
 
 ---
 
-## 💡 ¿Por qué lo implementamos así?
+## ¿Por qué lo implementamos así?
 
 ### Ventajas de esta implementación:
 
@@ -389,7 +389,7 @@ public class MatchmakingService {
 
 ---
 
-## 📝 Comentarios Adicionales
+##  Comentarios Adicionales
 
 ### Comparación de estrategias:
 
@@ -427,7 +427,7 @@ public class HybridStrategy implements IMatchMakingStrategy { }
 
 # 3. Patrón ABSTRACT FACTORY
 
-## 🎯 ¿Qué problema resuelve?
+##  ¿Qué problema resuelve?
 
 El sistema necesita enviar **notificaciones** a los usuarios por diferentes canales (Email, Discord, Push), y estos notificadores podrían tener variantes según el entorno (producción, testing, desarrollo).
 
@@ -438,7 +438,7 @@ El sistema necesita enviar **notificaciones** a los usuarios por diferentes cana
 
 ---
 
-## 🔧 ¿Cómo se implementó?
+##  ¿Cómo se implementó?
 
 ### Estructura de Archivos
 
@@ -574,20 +574,20 @@ public class SimpleNotifierFactory extends NotifierFactory {
 
 ---
 
-## 📍 ¿Dónde se implementó?
+## ¿Dónde se implementó?
 
-| Componente | Ubicación | Rol |
-|------------|-----------|-----|
-| Interfaz de producto | `interfaces/INotifier.java` | Contrato para todos los notificadores |
-| Productos concretos | `notifiers/EmailNotifier.java` | Implementa Email |
-|  | `notifiers/DiscordNotifier.java` | Implementa Discord |
-|  | `notifiers/PushNotifier.java` | Implementa Push |
-| Abstract Factory | `notifiers/NotifierFactory.java` | Define métodos de creación |
-| Concrete Factory | `notifiers/SimpleNotifierFactory.java` | Crea notificadores reales |
+| Componente           | Ubicación                              | Rol                                   |
+| -------------------- | -------------------------------------- | ------------------------------------- |
+| Interfaz de producto | `interfaces/INotifier.java`            | Contrato para todos los notificadores |
+| Productos concretos  | `notifiers/EmailNotifier.java`         | Implementa Email                      |
+|                      | `notifiers/DiscordNotifier.java`       | Implementa Discord                    |
+|                      | `notifiers/PushNotifier.java`          | Implementa Push                       |
+| Abstract Factory     | `notifiers/NotifierFactory.java`       | Define métodos de creación            |
+| Concrete Factory     | `notifiers/SimpleNotifierFactory.java` | Crea notificadores reales             |
 
 ---
 
-## 💡 ¿Por qué lo implementamos así?
+## ¿Por qué lo implementamos así?
 
 ### Ventajas de esta implementación:
 
@@ -628,7 +628,7 @@ public class SimpleNotifierFactory extends NotifierFactory {
 
 ---
 
-## 📝 Comentarios Adicionales
+##  Comentarios Adicionales
 
 ### Diagrama de la estructura:
 ```
@@ -697,7 +697,7 @@ public class MockNotifierFactory extends NotifierFactory {
 
 # 4. Patrón ADAPTER
 
-## 🎯 ¿Qué problema resuelve?
+## ¿Qué problema resuelve?
 
 El sistema necesita soportar **múltiples sistemas de autenticación** (local, Google OAuth, potencialmente Steam, Discord, etc.), pero cada uno tiene una interfaz diferente e incompatible.
 
@@ -708,7 +708,7 @@ El sistema necesita soportar **múltiples sistemas de autenticación** (local, G
 
 ---
 
-## 🔧 ¿Cómo se implementó?
+## ¿Cómo se implementó?
 
 ### Estructura de Archivos
 
@@ -861,19 +861,19 @@ public class AuthController {
 
 ---
 
-## 📍 ¿Dónde se implementó?
+##  ¿Dónde se implementó?
 
-| Componente | Ubicación | Rol |
-|------------|-----------|-----|
-| Interfaz Target | `auth/AuthProvider.java` | Interfaz común esperada por cliente |
-| Adapter Local | `auth/LocalAuthAdapter.java` | Adapta sistema de auth local |
-| Adapter Google | `auth/GoogleAuthAdapter.java` | Adapta Google OAuth |
-| Cliente | `auth/AuthService.java` | Usa la interfaz común |
-| Controlador | `auth/AuthController.java` | Coordina la autenticación |
+| Componente      | Ubicación                     | Rol                                 |
+| --------------- | ----------------------------- | ----------------------------------- |
+| Interfaz Target | `auth/AuthProvider.java`      | Interfaz común esperada por cliente |
+| Adapter Local   | `auth/LocalAuthAdapter.java`  | Adapta sistema de auth local        |
+| Adapter Google  | `auth/GoogleAuthAdapter.java` | Adapta Google OAuth                 |
+| Cliente         | `auth/AuthService.java`       | Usa la interfaz común               |
+| Controlador     | `auth/AuthController.java`    | Coordina la autenticación           |
 
 ---
 
-## 💡 ¿Por qué lo implementamos así?
+##  ¿Por qué lo implementamos así?
 
 ### Ventajas de esta implementación:
 
@@ -931,7 +931,7 @@ public class AuthController {
 
 ---
 
-## 📝 Comentarios Adicionales
+## Comentarios Adicionales
 
 ### Diagrama de la estructura:
 ```
@@ -1016,7 +1016,7 @@ authController.loginSteam("STEAM_0:1:12345678");
 
 # 5. Patrón OBSERVER
 
-## 🎯 ¿Qué problema resuelve?
+## ¿Qué problema resuelve?
 
 Cuando un **Scrim cambia de estado** (ej: de "Buscando Jugadores" a "Lobby Completo"), múltiples partes del sistema necesitan ser notificadas:
 - Usuarios suscritos deben recibir notificaciones
@@ -1031,7 +1031,7 @@ Cuando un **Scrim cambia de estado** (ej: de "Buscando Jugadores" a "Lobby Compl
 
 ---
 
-## 🔧 ¿Cómo se implementó?
+## ¿Cómo se implementó?
 
 ### Estructura de Archivos
 
@@ -1185,7 +1185,7 @@ public class Notificacion {
 
 ---
 
-## 📍 ¿Dónde se implementó?
+## ¿Dónde se implementó?
 
 | Componente | Ubicación | Rol |
 |------------|-----------|-----|
@@ -1196,7 +1196,7 @@ public class Notificacion {
 
 ---
 
-## 💡 ¿Por qué lo implementamos así?
+## ¿Por qué lo implementamos así?
 
 ### Ventajas de esta implementación:
 
@@ -1240,8 +1240,7 @@ public class Notificacion {
 - **Objeto Notificacion**: Encapsula los datos del evento (destinatario + mensaje)
 
 ---
-
-## 📝 Comentarios Adicionales
+##  Comentarios Adicionales
 
 ### Diagrama de la estructura:
 ```
@@ -1267,9 +1266,9 @@ public class Notificacion {
            │
     ┌──────┴───────┬──────────┐
     │              │          │
-┌───┴───┐    ┌────┴────┐  ┌──┴────┐
-│ Email │    │ Discord │  │ Push  │
-└───────┘    └─────────┘  └───────┘
+┌───┴───┐     ┌────┴────┐  ┌──┴────┐
+│ Email │     │ Discord │  │ Push  │
+└───────┘     └─────────┘  └───────┘
 ```
 
 ### Flujo de notificación:
@@ -1354,7 +1353,7 @@ Esto crea una arquitectura limpia donde:
 
 ---
 
-# 🎓 Conclusión General
+#  Conclusión General
 
 ## Resumen de los 5 Patrones
 
@@ -1412,11 +1411,11 @@ Los patrones no están aislados, trabajan juntos:
 
 **Puntos clave a mencionar**:
 
-✅ Identificamos 5 problemas reales del dominio  
-✅ Aplicamos el patrón más adecuado para cada problema  
-✅ Los patrones trabajan juntos, no aislados  
-✅ Código limpio, extensible y mantenible  
-✅ Principios SOLID respetados en toda la implementación  
+ Identificamos 5 problemas reales del dominio  
+ Aplicamos el patrón más adecuado para cada problema  
+ Los patrones trabajan juntos, no aislados  
+ Código limpio, extensible y mantenible  
+ Principios SOLID respetados en toda la implementación  
 
 **Demostración práctica**: Mostrar `Main.java` ejecutándose con todos los patrones funcionando en conjunto.
 
@@ -1430,7 +1429,3 @@ Los patrones no están aislados, trabajan juntos:
 - **run.bat**: Para compilar y ejecutar
 
 ---
-
-**Fecha de documentación**: 7 de noviembre de 2025  
-**Proyecto**: TPO Final - Proceso de Desarrollo de Software - UADE  
-**Equipo**: [Nombres de los integrantes]

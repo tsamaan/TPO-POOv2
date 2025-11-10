@@ -22,22 +22,16 @@ public class Main {
     // Scanner global para input del usuario
     private static Scanner scanner = new Scanner(System.in);
     
-    // Servicio de notificaciones (RF7 - Observer + Abstract Factory)
-    private static NotificationService notificationService = new NotificationService();
-    
-    // Servicio de búsqueda de scrims (RF2)
-    private static ScrimSearchService scrimSearchService = new ScrimSearchService();
-    
     // Lista de jugadores bot para simular matchmaking
     private static final String[] BOT_NAMES = {
         "ShadowBlade", "PhoenixFire", "IceQueen", "ThunderStrike", 
         "NightHawk", "DragonSlayer", "SilentAssassin", "MysticWizard",
-        "CyberNinja", "StormRider"
+        "CyberNinja", "StormRider", "LunarEclipse", "BlazeFury",
+        "FrostBite", "VenomStrike", "GhostRecon", "ZenMaster"
     };
     
-    // Roles de League of Legends (5 roles para 5v5)
     private static final String[] ROLES = {
-        "Top", "Jungle", "Mid", "ADC", "Support"
+        "Top", "Support", "ADC", "Jungla", "Mid"
     };
     
     public static void main(String[] args) {
@@ -79,12 +73,10 @@ public class Main {
             
             switch (opcion) {
                 case "1":
-                    // RF2: Búsqueda de scrims
-                    buscarScrimsDisponibles(usuarioActual);
+                    buscarPartida(usuarioActual);
                     break;
                 case "2":
-                    // Matchmaking rápido (flujo original)
-                    buscarPartida(usuarioActual);
+                    ejecutarDemoCompleta();
                     break;
                 case "3":
                     System.out.println("\n[!] Saliendo de eScrims...");
@@ -158,8 +150,8 @@ public class Main {
         System.out.println("\n" + LINE);
         System.out.println("[!] MENU PRINCIPAL - " + usuario.getUsername());
         System.out.println(LINE);
-        System.out.println("\n[1] Buscar Scrims Disponibles (RF2)");
-        System.out.println("[2] Crear y Unirse a Partida Rápida");
+        System.out.println("\n[1] Buscar Partida (Scrim)");
+        System.out.println("[2] Ver Demo Completa de Patrones");
         System.out.println("[3] Salir");
         System.out.print("\n[>] Selecciona una opción: ");
     }
@@ -183,10 +175,18 @@ public class Main {
         INotifier pushNotifier = factory.createPushNotifier();
         System.out.println("[+] Sistema de notificaciones activo");
         
-        // Crear nuevo scrim (Patrón State)
-        System.out.println("\n[*] Creando nueva sala de matchmaking...");
+        // Crear nuevo scrim usando BUILDER (Patrón Builder)
+        System.out.println("\n[*] Creando nueva sala de matchmaking usando Builder...");
         ScrimState estadoInicial = new EstadoBuscandoJugadores();
-        Scrim scrim = new Scrim(estadoInicial);
+        Scrim scrim = new Scrim.Builder(estadoInicial)
+            .juego("Valorant")
+            .formato("5v5")
+            .region("SA")
+            .modalidad("ranked")
+            .rangoMin(1000)
+            .rangoMax(2000)
+            .latenciaMax(80)
+            .build();
         
         // Agregar notificadores (Patrón Observer)
         scrim.addNotifier(emailNotifier);
@@ -204,7 +204,7 @@ public class Main {
         
         // Simular búsqueda de otros jugadores
         System.out.println("\n" + LINE);
-        System.out.println("[!] BUSCANDO JUGADORES... (se necesitan 10 jugadores en total para 5v5)");
+        System.out.println("[!] BUSCANDO JUGADORES... (se necesitan 8 jugadores en total)");
         System.out.println(LINE + "\n");
         
         List<Usuario> jugadoresEncontrados = new ArrayList<>();
@@ -214,7 +214,7 @@ public class Main {
         rolesAsignados.add(rolSeleccionado);
         
         Random random = new Random();
-        int jugadoresNecesarios = 10; // 5v5 como League of Legends
+        int jugadoresNecesarios = 8;
         
         // Simular la búsqueda progresiva
         for (int i = 1; i < jugadoresNecesarios; i++) {
@@ -236,7 +236,7 @@ public class Main {
             jugadoresEncontrados.add(bot);
             context.postular(bot, botRol);
             
-            System.out.println("[" + (i + 1) + "/10] Jugador encontrado: " + botName + " (" + botRol + ")");
+            System.out.println("[" + (i + 1) + "/8] Jugador encontrado: " + botName + " (" + botRol + ")");
         }
         
         // Mostrar resumen de roles
@@ -254,32 +254,12 @@ public class Main {
             System.out.println("    • " + ROLES[i] + ": " + contadorRoles[i] + " jugador(es)");
         }
         
-        // Validar que cada rol tenga exactamente 2 jugadores (1 por equipo)
-        boolean balanceado = true;
-        for (int i = 0; i < ROLES.length; i++) {
-            if (contadorRoles[i] != 2) {
-                balanceado = false;
-                break;
-            }
-        }
-        
-        if (balanceado) {
-            System.out.println("\n[✓] ¡Equipos perfectamente balanceados! Cada equipo tiene 1 de cada rol.");
-        } else {
-            System.out.println("\n[!] ADVERTENCIA: Los equipos pueden no estar balanceados correctamente.");
-        }
-        
         // Ejecutar matchmaking (Patrón Strategy)
         System.out.println("\n" + LINE);
         System.out.println("[!] ¡LOBBY COMPLETO! Ejecutando matchmaking...");
         System.out.println(LINE + "\n");
         
-        // *** RF7.ii: NOTIFICACIÓN - LOBBY COMPLETO ***
-        System.out.println("[*] Enviando notificaciones a todos los jugadores...");
-        notificationService.notificarLobbyCompleto(jugadoresEncontrados, scrim);
-        System.out.println("[+] ¡Notificaciones enviadas!");
-        
-        System.out.println("\n[*] Aplicando algoritmo de emparejamiento por MMR...");
+        System.out.println("[*] Aplicando algoritmo de emparejamiento por MMR...");
         MatchmakingService mmService = new MatchmakingService(new ByMMRStrategy());
         mmService.ejecutarEmparejamiento(scrim);
         System.out.println("[+] Estado actual: " + scrim.getEstado().getClass().getSimpleName());
@@ -292,9 +272,9 @@ public class Main {
         Equipo equipoAzul = new Equipo("Team Azure");
         Equipo equipoRojo = new Equipo("Team Crimson");
         
-        // Asignar jugadores a equipos (5 por equipo)
+        // Asignar jugadores a equipos
         for (int i = 0; i < jugadoresEncontrados.size(); i++) {
-            if (i < 5) {
+            if (i < 4) {
                 equipoAzul.asignarJugador(jugadoresEncontrados.get(i));
             } else {
                 equipoRojo.asignarJugador(jugadoresEncontrados.get(i));
@@ -303,20 +283,16 @@ public class Main {
         
         // Mostrar equipos
         System.out.println("╔═══════════════════════════════════════════════════════════════════════╗");
-        System.out.println("║                    EQUIPOS FORMADOS (5v5 LoL)                        ║");
+        System.out.println("║                         EQUIPOS FORMADOS                              ║");
         System.out.println("╠═══════════════════════════════════════════════════════════════════════╣");
         System.out.println("║                                                                       ║");
         System.out.println("║  " + String.format("%-67s", equipoAzul.getLado()) + "  ║");
         System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
         System.out.println("║     Jugador                                              Rol          ║");
         System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
-        
-        // Verificar que Team Azure tenga 1 de cada rol
-        List<String> rolesTeamAzul = new ArrayList<>();
         for (int i = 0; i < equipoAzul.getJugadores().size(); i++) {
             Usuario jugador = equipoAzul.getJugadores().get(i);
             String rol = rolesAsignados.get(jugadoresEncontrados.indexOf(jugador));
-            rolesTeamAzul.add(rol);
             String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? "*" : " ";
             String nombre = String.format("%-50s", marker + " " + jugador.getUsername());
             String rolFormato = String.format("%-10s", rol);
@@ -329,13 +305,9 @@ public class Main {
         System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
         System.out.println("║     Jugador                                              Rol          ║");
         System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
-        
-        // Verificar que Team Crimson tenga 1 de cada rol
-        List<String> rolesTeamCrimson = new ArrayList<>();
         for (int i = 0; i < equipoRojo.getJugadores().size(); i++) {
             Usuario jugador = equipoRojo.getJugadores().get(i);
             String rol = rolesAsignados.get(jugadoresEncontrados.indexOf(jugador));
-            rolesTeamCrimson.add(rol);
             String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? "*" : " ";
             String nombre = String.format("%-50s", marker + " " + jugador.getUsername());
             String rolFormato = String.format("%-10s", rol);
@@ -343,20 +315,10 @@ public class Main {
         }
         System.out.println("║                                                                       ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════╝");
+        System.out.println("\n[★] Indica tu posición en el equipo\n");
         
-        // Validación de balance por equipo
-        boolean azulBalanceado = validarBalanceEquipo(rolesTeamAzul);
-        boolean crimsonBalanceado = validarBalanceEquipo(rolesTeamCrimson);
-        
-        System.out.println("\n[*] Validación de composición de equipos:");
-        System.out.println("    Team Azure: " + (azulBalanceado ? "✓ Balanceado (1 de cada rol)" : "✗ No balanceado"));
-        System.out.println("    Team Crimson: " + (crimsonBalanceado ? "✓ Balanceado (1 de cada rol)" : "✗ No balanceado"));
-        
-        if (azulBalanceado && crimsonBalanceado) {
-            System.out.println("\n[✓] ¡Composición perfecta! Ambos equipos tienen exactamente 1 de cada rol.");
-        }
-        
-        System.out.println("\n[*] Indica tu posición en el equipo\n");
+        // Gestión de roles con patrón COMMAND
+        gestionarRolesConComandos(usuarioActual, jugadoresEncontrados, rolesAsignados, context);
         
         // Proceso de confirmación
         procesarConfirmaciones(usuarioActual, jugadoresEncontrados, scrim);
@@ -392,15 +354,9 @@ public class Main {
     }
     
     /**
-     * Asigna un rol de forma balanceada para League of Legends 5v5
-     * Cada equipo debe tener exactamente: 1 Top, 1 Jungle, 1 Mid, 1 ADC, 1 Support
-     * 
-     * Estrategia: Los primeros 5 jugadores formarán un equipo (1 de cada rol)
-     *             Los siguientes 5 jugadores formarán el otro equipo (1 de cada rol)
+     * Asigna un rol de forma balanceada (máximo 2 jugadores por rol - 1 por equipo)
      */
     private static String asignarRolBalanceado(List<String> rolesAsignados, Random random) {
-        int totalJugadores = rolesAsignados.size();
-        
         // Contar cuántos jugadores hay de cada rol
         int[] contadorRoles = new int[ROLES.length];
         for (String rol : rolesAsignados) {
@@ -412,29 +368,22 @@ public class Main {
             }
         }
         
-        // Determinar qué roles faltan
+        // Crear lista de roles disponibles (que tengan menos de 2 jugadores)
         List<String> rolesDisponibles = new ArrayList<>();
-        
-        if (totalJugadores < 5) {
-            // Primer equipo (jugadores 0-4): necesitamos 1 de cada rol
-            for (int i = 0; i < ROLES.length; i++) {
-                if (contadorRoles[i] == 0) {
-                    rolesDisponibles.add(ROLES[i]);
-                }
-            }
-        } else {
-            // Segundo equipo (jugadores 5-9): necesitamos completar el segundo set de roles
-            for (int i = 0; i < ROLES.length; i++) {
-                if (contadorRoles[i] < 2) {
-                    rolesDisponibles.add(ROLES[i]);
-                }
+        for (int i = 0; i < ROLES.length; i++) {
+            if (contadorRoles[i] < 2) {
+                rolesDisponibles.add(ROLES[i]);
             }
         }
         
-        // Si no hay roles disponibles (no debería pasar), devolver un rol aleatorio
+        // Si todos los roles tienen 2 jugadores pero aún faltan jugadores
+        // (caso de más de 10 jugadores), permitir roles con 2
         if (rolesDisponibles.isEmpty()) {
-            System.out.println("[!] ADVERTENCIA: No hay roles disponibles. Asignando rol aleatorio.");
-            return ROLES[random.nextInt(ROLES.length)];
+            for (int i = 0; i < ROLES.length; i++) {
+                if (contadorRoles[i] == 2) {
+                    rolesDisponibles.add(ROLES[i]);
+                }
+            }
         }
         
         // Seleccionar un rol aleatorio de los disponibles
@@ -442,25 +391,160 @@ public class Main {
     }
     
     /**
-     * Valida que un equipo tenga exactamente 1 jugador de cada rol (composición perfecta de LoL)
+     * Gestiona roles usando el patrón COMMAND
+     * Permite al usuario ajustar roles con capacidad de undo
      */
-    private static boolean validarBalanceEquipo(List<String> rolesEquipo) {
-        if (rolesEquipo.size() != 5) {
-            return false; // Un equipo de LoL debe tener exactamente 5 jugadores
+    private static void gestionarRolesConComandos(Usuario usuarioActual, List<Usuario> jugadores, 
+                                                   List<String> rolesAsignados, ScrimContext context) {
+        System.out.println(LINE);
+        System.out.println("[!] GESTIÓN DE ROLES (Patrón COMMAND)");
+        System.out.println(LINE + "\n");
+        
+        // Asignar los roles guardados a los usuarios
+        for (int i = 0; i < jugadores.size(); i++) {
+            jugadores.get(i).setRol(rolesAsignados.get(i));
         }
         
-        // Verificar que cada rol aparezca exactamente 1 vez
-        for (String rolRequerido : ROLES) {
-            long count = rolesEquipo.stream()
-                .filter(rol -> rol.equals(rolRequerido))
-                .count();
+        // Crear el gestor de comandos (Invoker)
+        commands.CommandManager commandManager = new commands.CommandManager(context);
+        
+        System.out.println("[*] Como organizador, puedes ajustar los roles antes de confirmar.");
+        System.out.println("[*] Los cambios se pueden deshacer con UNDO.\n");
+        
+        boolean gestionando = true;
+        while (gestionando) {
+            System.out.println("\n[?] Opciones:");
+            System.out.println("  [1] Cambiar rol de un jugador");
+            System.out.println("  [2] Intercambiar roles entre dos jugadores");
+            System.out.println("  [3] Deshacer último cambio");
+            System.out.println("  [4] Continuar a confirmación");
+            System.out.print("\n[>] Selecciona una opción: ");
             
-            if (count != 1) {
-                return false; // Debe haber exactamente 1 de cada rol
+            String opcion = scanner.nextLine().trim();
+            
+            switch (opcion) {
+                case "1":
+                    // Asignar nuevo rol
+                    cambiarRolJugador(jugadores, commandManager);
+                    break;
+                    
+                case "2":
+                    // Swap de roles
+                    intercambiarRoles(jugadores, commandManager);
+                    break;
+                    
+                case "3":
+                    // Undo
+                    commandManager.deshacerUltimo();
+                    mostrarRolesActuales(jugadores);
+                    break;
+                    
+                case "4":
+                    // Continuar
+                    System.out.println("\n[+] Roles finalizados. Continuando a confirmación...");
+                    gestionando = false;
+                    break;
+                    
+                default:
+                    System.out.println("[!] Opción inválida");
+                    break;
             }
         }
         
-        return true; // Equipo perfectamente balanceado
+        // Actualizar la lista de roles asignados con los cambios finales
+        for (int i = 0; i < jugadores.size(); i++) {
+            rolesAsignados.set(i, jugadores.get(i).getRol());
+        }
+        
+        System.out.println();
+    }
+    
+    /**
+     * Cambia el rol de un jugador usando AsignarRolCommand
+     */
+    private static void cambiarRolJugador(List<Usuario> jugadores, commands.CommandManager commandManager) {
+        System.out.println("\n[*] Jugadores disponibles:");
+        for (int i = 0; i < jugadores.size(); i++) {
+            Usuario j = jugadores.get(i);
+            System.out.println("  [" + (i + 1) + "] " + j.getUsername() + " - Rol actual: " + j.getRol());
+        }
+        
+        System.out.print("\n[>] Selecciona jugador (número): ");
+        try {
+            int indice = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            
+            if (indice >= 0 && indice < jugadores.size()) {
+                Usuario jugador = jugadores.get(indice);
+                
+                System.out.println("\n[*] Roles disponibles:");
+                for (int i = 0; i < ROLES.length; i++) {
+                    System.out.println("  [" + (i + 1) + "] " + ROLES[i]);
+                }
+                
+                System.out.print("\n[>] Selecciona nuevo rol (número): ");
+                int rolIndice = Integer.parseInt(scanner.nextLine().trim()) - 1;
+                
+                if (rolIndice >= 0 && rolIndice < ROLES.length) {
+                    // Crear y ejecutar comando
+                    commands.AsignarRolCommand comando = new commands.AsignarRolCommand(jugador, ROLES[rolIndice]);
+                    commandManager.ejecutarComando(comando);
+                    mostrarRolesActuales(jugadores);
+                } else {
+                    System.out.println("[!] Rol inválido");
+                }
+            } else {
+                System.out.println("[!] Jugador inválido");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("[!] Entrada inválida");
+        }
+    }
+    
+    /**
+     * Intercambia roles entre dos jugadores usando SwapJugadoresCommand
+     */
+    private static void intercambiarRoles(List<Usuario> jugadores, commands.CommandManager commandManager) {
+        System.out.println("\n[*] Jugadores disponibles:");
+        for (int i = 0; i < jugadores.size(); i++) {
+            Usuario j = jugadores.get(i);
+            System.out.println("  [" + (i + 1) + "] " + j.getUsername() + " - Rol: " + j.getRol());
+        }
+        
+        try {
+            System.out.print("\n[>] Primer jugador (número): ");
+            int indice1 = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            
+            System.out.print("[>] Segundo jugador (número): ");
+            int indice2 = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            
+            if (indice1 >= 0 && indice1 < jugadores.size() && 
+                indice2 >= 0 && indice2 < jugadores.size() && 
+                indice1 != indice2) {
+                
+                // Crear y ejecutar comando
+                commands.SwapJugadoresCommand comando = new commands.SwapJugadoresCommand(
+                    jugadores.get(indice1), 
+                    jugadores.get(indice2)
+                );
+                commandManager.ejecutarComando(comando);
+                mostrarRolesActuales(jugadores);
+                
+            } else {
+                System.out.println("[!] Jugadores inválidos o iguales");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("[!] Entrada inválida");
+        }
+    }
+    
+    /**
+     * Muestra los roles actuales de todos los jugadores
+     */
+    private static void mostrarRolesActuales(List<Usuario> jugadores) {
+        System.out.println("\n[*] Roles actuales:");
+        for (Usuario j : jugadores) {
+            System.out.println("  • " + j.getUsername() + ": " + j.getRol());
+        }
     }
     
     /**
@@ -515,11 +599,6 @@ public class Main {
         
         if (confirmados == jugadores.size()) {
             System.out.println("[+] ¡Todos los jugadores confirmaron! Iniciando partida...");
-            
-            // *** RF7.iii: NOTIFICACIÓN - TODOS CONFIRMARON ***
-            System.out.println("[*] Enviando notificación de confirmación completa...");
-            notificationService.notificarTodosConfirmaron(jugadores, scrim);
-            System.out.println("[+] ¡Notificaciones enviadas!");
         }
     }
     
@@ -535,13 +614,8 @@ public class Main {
         scrim.getEstado().iniciar(scrim);
         System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
         
-        // *** RF7.iv: NOTIFICACIÓN - EN JUEGO ***
-        System.out.println("\n[*] Enviando notificación de inicio de partida...");
-        notificationService.notificarEnJuego(jugadores, scrim);
-        System.out.println("[+] ¡Notificaciones enviadas!");
-        
         System.out.println("\n[*] La partida está en curso...");
-        System.out.println("[*] Duración estimada: 25-45 minutos (partida estándar de LoL)");
+        System.out.println("[*] Duración estimada: 30-90 minutos");
         
         try {
             Thread.sleep(2000);
@@ -563,11 +637,6 @@ public class Main {
         
         scrim.getEstado().cancelar(scrim);
         System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
-        
-        // *** RF7.iv: NOTIFICACIÓN - FINALIZADO ***
-        System.out.println("\n[*] Enviando notificación de fin de partida...");
-        notificationService.notificarFinalizado(jugadores, scrim);
-        System.out.println("[+] ¡Notificaciones enviadas!");
         
         // Generar estadísticas
         mostrarEstadisticas(jugadores, scrim, equipoAzul, equipoRojo);
@@ -622,9 +691,9 @@ public class Main {
         // Determinar ganador
         int killsAzul = 0, killsRojo = 0;
         for (int i = 0; i < estadisticas.size(); i++) {
-            if (i < 5) { // Primeros 5 jugadores son Team Azure
+            if (i < 4) {
                 killsAzul += estadisticas.get(i).getKills();
-            } else { // Últimos 5 jugadores son Team Crimson
+            } else {
                 killsRojo += estadisticas.get(i).getKills();
             }
         }
@@ -638,188 +707,54 @@ public class Main {
     }
     
     /**
-     * RF2: Sistema de búsqueda de scrims con filtros
+     * Ejecuta una demostracion completa de todos los patrones de diseño
      */
-    private static void buscarScrimsDisponibles(Usuario usuarioActual) {
+    private static void ejecutarDemoCompleta() {
         System.out.println("\n" + SEPARATOR);
-        System.out.println("[!] BÚSQUEDA DE SCRIMS DISPONIBLES");
+        System.out.println("╔═══════════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                                                                               ║");
+        System.out.println("║                    DEMOSTRACION COMPLETA DE PATRONES                          ║");
+        System.out.println("║                                                                               ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
         
-        // Primero, crear algunos scrims de ejemplo en el sistema
-        inicializarScrimsEjemplo();
+        pause();
         
-        // Menú de búsqueda
-        System.out.println("[*] Opciones de búsqueda:");
-        System.out.println("    [1] Buscar por juego");
-        System.out.println("    [2] Buscar por región");
-        System.out.println("    [3] Buscar por formato (5v5, 3v3, 1v1)");
-        System.out.println("    [4] Búsqueda personalizada con filtros");
-        System.out.println("    [5] Ver todos los scrims disponibles");
-        System.out.println("    [6] Volver al menú principal");
-        System.out.print("\n[>] Selecciona una opción: ");
+        // 1. Adapter Pattern
+        demonstrateAdapterPattern();
+        pause();
         
-        String opcion = scanner.nextLine().trim();
-        List<Scrim> resultados = new ArrayList<>();
+        // 2. Abstract Factory Pattern  
+        NotifierFactory factory = demonstrateAbstractFactoryPattern();
+        pause();
         
-        switch (opcion) {
-            case "1":
-                // Buscar por juego
-                System.out.print("\n[?] Ingresa el juego (ej: League of Legends, Valorant, CS2): ");
-                String juego = scanner.nextLine().trim();
-                resultados = scrimSearchService.buscarPorJuego(juego);
-                break;
-                
-            case "2":
-                // Buscar por región
-                System.out.print("\n[?] Ingresa la región (ej: LAS, NA, EUW): ");
-                String region = scanner.nextLine().trim();
-                resultados = scrimSearchService.buscarPorRegion(region);
-                break;
-                
-            case "3":
-                // Buscar por formato
-                System.out.print("\n[?] Ingresa el formato (5v5, 3v3, 1v1): ");
-                String formato = scanner.nextLine().trim();
-                resultados = scrimSearchService.buscarPorFormato(formato);
-                break;
-                
-            case "4":
-                // Búsqueda personalizada
-                System.out.println("\n[*] Búsqueda personalizada (presiona ENTER para omitir):");
-                
-                System.out.print("  [?] Juego: ");
-                String juegoFiltro = scanner.nextLine().trim();
-                juegoFiltro = juegoFiltro.isEmpty() ? null : juegoFiltro;
-                
-                System.out.print("  [?] Formato: ");
-                String formatoFiltro = scanner.nextLine().trim();
-                formatoFiltro = formatoFiltro.isEmpty() ? null : formatoFiltro;
-                
-                System.out.print("  [?] Región: ");
-                String regionFiltro = scanner.nextLine().trim();
-                regionFiltro = regionFiltro.isEmpty() ? null : regionFiltro;
-                
-                resultados = scrimSearchService.buscarScrims(juegoFiltro, formatoFiltro, 
-                                                            null, null, regionFiltro);
-                
-                // RF2: Opción de guardar búsqueda favorita
-                if (!resultados.isEmpty()) {
-                    System.out.print("\n[?] ¿Guardar esta búsqueda como favorita? (S/N): ");
-                    String guardar = scanner.nextLine().trim();
-                    if (guardar.equalsIgnoreCase("S") || guardar.equalsIgnoreCase("SI")) {
-                        String busquedaFavorita = scrimSearchService.guardarBusquedaFavorita(
-                            juegoFiltro, formatoFiltro, regionFiltro);
-                        usuarioActual.agregarBusquedaFavorita(busquedaFavorita);
-                        System.out.println("[+] ¡Búsqueda guardada en favoritos!");
-                    }
-                }
-                break;
-                
-            case "5":
-                // Ver todos
-                resultados = scrimSearchService.obtenerTodos();
-                break;
-                
-            case "6":
-                // Volver
-                return;
-                
-            default:
-                System.out.println("\n[!] Opción inválida.");
-                return;
-        }
+        // 3. State & Observer Pattern
+        Scrim scrim = demonstrateStatePattern(factory);
+        pause();
         
-        // Mostrar resultados
-        System.out.println("\n" + LINE);
-        System.out.println("[!] RESULTADOS DE BÚSQUEDA");
-        System.out.println(LINE + "\n");
+        // 4. Strategy Pattern
+        demonstrateStrategyPattern(scrim);
+        pause();
         
-        if (resultados.isEmpty()) {
-            System.out.println("[!] No se encontraron scrims que coincidan con tus criterios.");
-        } else {
-            System.out.println("[+] Se encontraron " + resultados.size() + " scrim(s):\n");
-            
-            int contador = 1;
-            for (Scrim scrim : resultados) {
-                System.out.println("[" + contador + "] " + 
-                    (scrim.getJuego() != null ? scrim.getJuego() : "Juego no especificado") + " - " +
-                    (scrim.getFormato() != null ? scrim.getFormato() : "5v5") + " | " +
-                    "Región: " + (scrim.getRegion() != null ? scrim.getRegion() : "Global") + " | " +
-                    "Rango: " + (scrim.getRangoMinimo() != null ? scrim.getRangoMinimo() : "Cualquiera") +
-                    " - " + (scrim.getRangoMaximo() != null ? scrim.getRangoMaximo() : "Cualquiera") + " | " +
-                    "Latencia máx: " + scrim.getLatenciaMaxima() + "ms | " +
-                    "Estado: " + scrim.getEstado().getClass().getSimpleName());
-                contador++;
-            }
-            
-            System.out.println("\n[*] Estos scrims están disponibles para unirse.");
-        }
+        // 5. State Transitions
+        demonstrateStateTransitions(scrim);
+        pause();
         
-        System.out.println("\n[!] Presiona ENTER para volver al menú principal...");
-        scanner.nextLine();
+        // 6. Builder Pattern
+        demonstrateBuilderPattern();
+        pause();
+        
+        // 7. Composite Pattern
+        demonstrateCompositePattern();
+        pause();
+        
+        // 8. Domain Model
+        demonstrateDomainModel(scrim);
+        
+        // Footer
+        printFooter();
     }
-    
-    /**
-     * RF2: Inicializa scrims de ejemplo para demostración de búsqueda
-     */
-    private static void inicializarScrimsEjemplo() {
-        // Solo inicializar una vez
-        if (!scrimSearchService.obtenerTodos().isEmpty()) {
-            return;
-        }
-        
-        // Crear varios scrims de ejemplo
-        Scrim scrim1 = new Scrim(new EstadoBuscandoJugadores());
-        scrim1.setJuego("League of Legends");
-        scrim1.setFormato("5v5");
-        scrim1.setRegion("LAS");
-        scrim1.setRangoMinimo("Gold");
-        scrim1.setRangoMaximo("Platinum");
-        scrim1.setLatenciaMaxima(50);
-        scrim1.setModalidad("ranked-like");
-        scrimSearchService.registrarScrim(scrim1);
-        
-        Scrim scrim2 = new Scrim(new EstadoBuscandoJugadores());
-        scrim2.setJuego("Valorant");
-        scrim2.setFormato("5v5");
-        scrim2.setRegion("NA");
-        scrim2.setRangoMinimo("Diamond");
-        scrim2.setRangoMaximo("Immortal");
-        scrim2.setLatenciaMaxima(40);
-        scrim2.setModalidad("ranked-like");
-        scrimSearchService.registrarScrim(scrim2);
-        
-        Scrim scrim3 = new Scrim(new EstadoBuscandoJugadores());
-        scrim3.setJuego("League of Legends");
-        scrim3.setFormato("3v3");
-        scrim3.setRegion("LAS");
-        scrim3.setRangoMinimo("Silver");
-        scrim3.setRangoMaximo("Gold");
-        scrim3.setLatenciaMaxima(60);
-        scrim3.setModalidad("casual");
-        scrimSearchService.registrarScrim(scrim3);
-        
-        Scrim scrim4 = new Scrim(new EstadoBuscandoJugadores());
-        scrim4.setJuego("CS2");
-        scrim4.setFormato("5v5");
-        scrim4.setRegion("EUW");
-        scrim4.setRangoMinimo("Master Guardian");
-        scrim4.setRangoMaximo("Global Elite");
-        scrim4.setLatenciaMaxima(35);
-        scrim4.setModalidad("ranked-like");
-        scrimSearchService.registrarScrim(scrim4);
-        
-        Scrim scrim5 = new Scrim(new EstadoBuscandoJugadores());
-        scrim5.setJuego("League of Legends");
-        scrim5.setFormato("5v5");
-        scrim5.setRegion("LAS");
-        scrim5.setRangoMinimo("Iron");
-        scrim5.setRangoMaximo("Bronze");
-        scrim5.setLatenciaMaxima(70);
-        scrim5.setModalidad("practica");
-        scrimSearchService.registrarScrim(scrim5);
-    }
-    
+
     /**
      * Imprime el pie de pagina
      */
@@ -829,12 +764,16 @@ public class Main {
         System.out.println("║                                                                               ║");
         System.out.println("║                 DEMOSTRACION COMPLETADA EXITOSAMENTE                          ║");
         System.out.println("║                                                                               ║");
-        System.out.println("║              Todos los patrones implementados:                                ║");
-        System.out.println("║              • Patron ADAPTER                                                 ║");
-        System.out.println("║              • Patron ABSTRACT FACTORY                                        ║");
-        System.out.println("║              • Patron STATE                                                   ║");
-        System.out.println("║              • Patron STRATEGY                                                ║");
-        System.out.println("║              • Patron OBSERVER                                                ║");
+        System.out.println("║              ✅ Todos los patrones implementados (8 total):                   ║");
+        System.out.println("║                                                                               ║");
+        System.out.println("║              1. Patron ADAPTER        - Autenticacion multiple                ║");
+        System.out.println("║              2. Patron ABSTRACT FACTORY - Creacion de notificadores           ║");
+        System.out.println("║              3. Patron STATE          - Estados del scrim                     ║");
+        System.out.println("║              4. Patron STRATEGY       - Algoritmos de matchmaking             ║");
+        System.out.println("║              5. Patron OBSERVER       - Sistema de notificaciones             ║");
+        System.out.println("║              6. Patron COMMAND        - Acciones reversibles                  ║");
+        System.out.println("║              7. Patron BUILDER        - Construccion de scrims                ║");
+        System.out.println("║              8. Patron COMPOSITE      - Grupos de notificadores               ║");
         System.out.println("║                                                                               ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
@@ -1040,10 +979,119 @@ public class Main {
     }
     
     /**
+     * Demuestra el patron BUILDER para creacion de Scrims
+     */
+    private static void demonstrateBuilderPattern() {
+        printSectionTitle("6", "BUILDER", "Construccion fluida de objetos complejos");
+        
+        System.out.println("[!] Creando Scrims con diferentes configuraciones usando Builder...\n");
+        
+        // Scrim 1: Ranked competitivo
+        System.out.println("[*] Scrim #1: Partida Ranked Competitiva");
+        Scrim scrimRanked = new Scrim.Builder(new EstadoBuscandoJugadores())
+            .juego("Valorant")
+            .formato("5v5")
+            .region("SA")
+            .modalidad("ranked")
+            .rangoMin(1500)
+            .rangoMax(2000)
+            .latenciaMax(50)
+            .build();
+        
+        System.out.println("   " + scrimRanked);
+        System.out.println();
+        
+        // Scrim 2: Casual relajado
+        System.out.println("[*] Scrim #2: Partida Casual");
+        Scrim scrimCasual = new Scrim.Builder(new EstadoBuscandoJugadores())
+            .juego("League of Legends")
+            .formato("5v5")
+            .region("NA")
+            .modalidad("casual")
+            .rangoMin(0)
+            .rangoMax(3000)
+            .latenciaMax(100)
+            .build();
+        
+        System.out.println("   " + scrimCasual);
+        System.out.println();
+        
+        // Scrim 3: Torneo con restricciones estrictas
+        System.out.println("[*] Scrim #3: Torneo Pro");
+        Scrim scrimTorneo = new Scrim.Builder(new EstadoBuscandoJugadores())
+            .juego("CS:GO")
+            .formato("5v5")
+            .region("EU")
+            .modalidad("tournament")
+            .rangoMin(2500)
+            .rangoMax(3000)
+            .latenciaMax(30)
+            .build();
+        
+        System.out.println("   " + scrimTorneo);
+        System.out.println();
+        
+        System.out.println("[!] Ventajas del Builder:");
+        System.out.println("   • Construccion legible y fluida");
+        System.out.println("   • Validaciones integradas");
+        System.out.println("   • Parametros opcionales con valores por defecto");
+        System.out.println("   • Codigo mas mantenible y extensible");
+    }
+    
+    /**
+     * Demuestra el patron COMPOSITE para grupos de notificaciones
+     */
+    private static void demonstrateCompositePattern() {
+        printSectionTitle("7", "COMPOSITE", "Jerarquias de objetos con tratamiento uniforme");
+        
+        System.out.println("[!] Creando grupos de notificadores (Composite)...\n");
+        
+        // Crear notificadores individuales (leafs)
+        interfaces.INotificationComponent email = new EmailNotifier();
+        interfaces.INotificationComponent discord = new DiscordNotifier();
+        interfaces.INotificationComponent push = new PushNotifier();
+        
+        System.out.println("[*] Notificadores individuales creados:");
+        System.out.println("   • " + email.getName());
+        System.out.println("   • " + discord.getName());
+        System.out.println("   • " + push.getName());
+        System.out.println();
+        
+        // Crear grupos (composites)
+        NotificationGroup allChannels = new NotificationGroup("AllChannels");
+        allChannels.add(email);
+        allChannels.add(discord);
+        allChannels.add(push);
+        System.out.println();
+        
+        NotificationGroup criticalOnly = new NotificationGroup("CriticalOnly");
+        criticalOnly.add(discord);
+        criticalOnly.add(push);
+        System.out.println();
+        
+        // Demostrar envio con composite
+        System.out.println("[*] DEMOSTRACION: Enviando notificacion a todos los canales");
+        Notificacion notif1 = new Notificacion("¡Scrim confirmado! La partida comienza en 5 minutos.");
+        allChannels.sendNotification(notif1);
+        System.out.println();
+        
+        System.out.println("[*] DEMOSTRACION: Enviando alerta critica solo a Discord y Push");
+        Notificacion notif2 = new Notificacion("⚠️ ALERTA: Jugador desconectado, buscando reemplazo...");
+        criticalOnly.sendNotification(notif2);
+        System.out.println();
+        
+        System.out.println("[!] Ventajas del Composite:");
+        System.out.println("   • Trata objetos individuales y grupos de forma uniforme");
+        System.out.println("   • Permite crear jerarquias complejas de notificaciones");
+        System.out.println("   • Facil agregar nuevos canales sin modificar codigo existente");
+        System.out.println("   • Perfecto para configuraciones dinamicas (dev/prod/testing)");
+    }
+
+    /**
      * Demuestra el modelo de dominio completo
      */
     private static void demonstrateDomainModel(Scrim scrim) {
-        printSectionTitle("6", "DOMAIN MODEL", "Equipos, Confirmaciones y Estadisticas");
+        printSectionTitle("8", "DOMAIN MODEL", "Equipos, Confirmaciones y Estadisticas");
         
         // Crear jugadores para el modelo de dominio
         Usuario[] players = {

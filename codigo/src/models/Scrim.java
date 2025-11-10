@@ -1,148 +1,204 @@
 package models;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import states.ScrimState;
 
+/**
+ * Clase Scrim - Representa una partida de práctica (Scrim)
+ * Utiliza el patrón STATE para gestionar su ciclo de vida
+ * Utiliza el patrón OBSERVER para notificar cambios
+ */
 public class Scrim {
-    // Identificación
+    // Identificadores
     private UUID id;
-    private Usuario creador;
     
-    // RF3a: Juego y formato
-    private String juego; // ej: "League of Legends", "Valorant", "CS2"
-    private String formato; // ej: "5v5", "3v3", "1v1"
-    
-    // RF3b: Cantidad y roles
-    private int cantidadJugadoresPorLado; // ej: 5 para 5v5
-    private int cuposTotales; // calculado: cantidadJugadoresPorLado * 2
-    private List<String> rolesRequeridos; // ej: ["Top", "Jungle", "Mid", "ADC", "Support"]
-    
-    // RF3c: Región y límites
-    private String region; // ej: "LAS", "NA", "EUW"
-    private String rangoMinimo; // ej: "Iron", "Bronze", "Silver"
-    private String rangoMaximo; // ej: "Diamond", "Master", "Challenger"
-    private int latenciaMaxima; // en ms, ej: 50
-    
-    // RF3d: Fecha/hora y modalidad
-    private LocalDateTime fechaHora; // cuándo se jugará
-    private int duracionEstimada; // en minutos
-    private String modalidad; // "ranked-like", "casual", "practica"
-    
-    // Estado y gestión
+    // Estado (Patrón STATE)
     private ScrimState estado;
+    
+    // Configuración del scrim
+    private String juego;           // "Valorant", "League of Legends", etc.
+    private String formato;         // "5v5", "3v3", etc.
+    private String region;          // "SA" (South America), "NA", "EU", etc.
+    private String modalidad;       // "ranked", "casual", "tournament"
+    
+    // Restricciones de matchmaking
+    private int rangoMin;           // MMR mínimo permitido
+    private int rangoMax;           // MMR máximo permitido
+    private int latenciaMax;        // Latencia máxima en ms
+    
+    // Gestión de jugadores
     private List<Postulacion> postulaciones = new ArrayList<>();
+    private int cuposMaximos;       // Número máximo de jugadores
+    
+    // Observadores (Patrón OBSERVER)
     private List<interfaces.INotifier> notifiers = new ArrayList<>();
-    private List<Usuario> listaEspera = new ArrayList<>();
-    
-    // Constructor completo
-    public Scrim(Usuario creador, String juego, String formato, 
-                 int cantidadJugadoresPorLado, String region,
-                 String rangoMin, String rangoMax, int latenciaMax,
-                 LocalDateTime fechaHora, int duracion, String modalidad,
-                 ScrimState estadoInicial) {
-        this.id = UUID.randomUUID();
-        this.creador = creador;
-        this.juego = juego;
-        this.formato = formato;
-        this.cantidadJugadoresPorLado = cantidadJugadoresPorLado;
-        this.cuposTotales = cantidadJugadoresPorLado * 2;
-        this.region = region;
-        this.rangoMinimo = rangoMin;
-        this.rangoMaximo = rangoMax;
-        this.latenciaMaxima = latenciaMax;
-        this.fechaHora = fechaHora;
-        this.duracionEstimada = duracion;
-        this.modalidad = modalidad;
-        this.estado = estadoInicial;
-        this.rolesRequeridos = new ArrayList<>();
-    }
-    
-    // Constructor simple (retrocompatibilidad con Main.java existente)
+
+    /**
+     * Constructor público para compatibilidad con código existente
+     */
     public Scrim(ScrimState estadoInicial) {
         this.id = UUID.randomUUID();
         this.estado = estadoInicial;
-        this.rolesRequeridos = new ArrayList<>();
-        this.cuposTotales = 10; // default para LoL 5v5
+        this.cuposMaximos = 10; // Default 5v5
     }
 
-    // Getters estado y gestión básica
-    public UUID getId() { return id; }
-    public Usuario getCreador() { return creador; }
-    public ScrimState getEstado() { return estado; }
+    /**
+     * Constructor privado usado por Builder
+     */
+    private Scrim(Builder builder) {
+        this.id = UUID.randomUUID();
+        this.estado = builder.estado;
+        this.juego = builder.juego;
+        this.formato = builder.formato;
+        this.region = builder.region;
+        this.modalidad = builder.modalidad;
+        this.rangoMin = builder.rangoMin;
+        this.rangoMax = builder.rangoMax;
+        this.latenciaMax = builder.latenciaMax;
+        this.cuposMaximos = builder.cuposMaximos;
+    }
+
+    // === Métodos de Estado (STATE Pattern) ===
+    
+    public ScrimState getEstado() { 
+        return estado; 
+    }
     
     public void cambiarEstado(ScrimState nuevo) {
         this.estado = nuevo;
     }
 
-    // Getters juego y formato (RF3a)
+    // === Métodos de Postulaciones ===
+    
+    public void addPostulacion(Postulacion p) { 
+        postulaciones.add(p); 
+    }
+    
+    public List<Postulacion> getPostulaciones() { 
+        return postulaciones; 
+    }
+
+    // === Métodos de Notificación (OBSERVER Pattern) ===
+    
+    public void addNotifier(interfaces.INotifier n) { 
+        notifiers.add(n); 
+    }
+    
+    public void notificarCambio(Notificacion notificacion){
+        for (interfaces.INotifier n: notifiers) {
+            n.sendNotification(notificacion);
+        }
+    }
+
+    // === Getters de Configuración ===
+    
+    public UUID getId() { return id; }
     public String getJuego() { return juego; }
     public String getFormato() { return formato; }
-    
-    // Getters cantidad y roles (RF3b)
-    public int getCantidadJugadoresPorLado() { return cantidadJugadoresPorLado; }
-    public int getCuposTotales() { return cuposTotales; }
-    public List<String> getRolesRequeridos() { return rolesRequeridos; }
-    public void setRolesRequeridos(List<String> roles) { this.rolesRequeridos = roles; }
-    
-    // Getters región y límites (RF3c)
     public String getRegion() { return region; }
-    public String getRangoMinimo() { return rangoMinimo; }
-    public String getRangoMaximo() { return rangoMaximo; }
-    public int getLatenciaMaxima() { return latenciaMaxima; }
-    
-    // Getters fecha/hora y modalidad (RF3d)
-    public LocalDateTime getFechaHora() { return fechaHora; }
-    public int getDuracionEstimada() { return duracionEstimada; }
     public String getModalidad() { return modalidad; }
+    public int getRangoMin() { return rangoMin; }
+    public int getRangoMax() { return rangoMax; }
+    public int getLatenciaMax() { return latenciaMax; }
+    public int getCuposMaximos() { return cuposMaximos; }
+
+    // === Setters (para compatibilidad) ===
     
-    // Setters (para modificación post-creación)
     public void setJuego(String juego) { this.juego = juego; }
     public void setFormato(String formato) { this.formato = formato; }
     public void setRegion(String region) { this.region = region; }
-    public void setRangoMinimo(String min) { this.rangoMinimo = min; }
-    public void setRangoMaximo(String max) { this.rangoMaximo = max; }
-    public void setLatenciaMaxima(int ms) { this.latenciaMaxima = ms; }
-    public void setFechaHora(LocalDateTime fecha) { this.fechaHora = fecha; }
-    public void setDuracionEstimada(int minutos) { this.duracionEstimada = minutos; }
-    public void setModalidad(String mod) { this.modalidad = mod; }
+    public void setModalidad(String modalidad) { this.modalidad = modalidad; }
 
-    // Gestión de postulaciones
-    public void addPostulacion(Postulacion p) { postulaciones.add(p); }
-    public List<Postulacion> getPostulaciones() { return postulaciones; }
-    
-    // Lista de espera (RF6 - suplentes)
-    public void addListaEspera(Usuario u) { listaEspera.add(u); }
-    public List<Usuario> getListaEspera() { return listaEspera; }
+    /**
+     * Builder interno para construcción fluida de Scrim
+     * Patrón BUILDER
+     */
+    public static class Builder {
+        // Obligatorios
+        private ScrimState estado;
+        
+        // Opcionales con valores por defecto
+        private String juego = "Valorant";
+        private String formato = "5v5";
+        private String region = "SA";
+        private String modalidad = "casual";
+        private int rangoMin = 0;
+        private int rangoMax = 3000;
+        private int latenciaMax = 100;
+        private int cuposMaximos = 10;
 
-    // Notificaciones (RF7)
-    public void addNotifier(interfaces.INotifier n) { notifiers.add(n); }
-    public void notificarCambio(Notificacion notificacion){
-        for (interfaces.INotifier n: notifiers) n.sendNotification(notificacion);
-    }
-    
-    // Métodos de negocio
-    public boolean cumpleRequisitos(Usuario usuario) {
-        // Validar región
-        if (this.region != null && usuario.getRegion() != null 
-            && !this.region.equals(usuario.getRegion())) {
-            return false;
+        public Builder(ScrimState estadoInicial) {
+            this.estado = estadoInicial;
         }
-        
-        // Validar rango (simplificado - en producción sería más complejo)
-        // TODO: Implementar comparación real de rangos
-        
-        return true;
+
+        public Builder juego(String juego) {
+            this.juego = juego;
+            return this;
+        }
+
+        public Builder formato(String formato) {
+            this.formato = formato;
+            // Ajustar cupos según formato
+            if (formato.equals("5v5")) this.cuposMaximos = 10;
+            else if (formato.equals("3v3")) this.cuposMaximos = 6;
+            else if (formato.equals("1v1")) this.cuposMaximos = 2;
+            return this;
+        }
+
+        public Builder region(String region) {
+            this.region = region;
+            return this;
+        }
+
+        public Builder modalidad(String modalidad) {
+            this.modalidad = modalidad;
+            return this;
+        }
+
+        public Builder rangoMin(int rangoMin) {
+            if (rangoMin < 0) throw new IllegalArgumentException("Rango mínimo no puede ser negativo");
+            this.rangoMin = rangoMin;
+            return this;
+        }
+
+        public Builder rangoMax(int rangoMax) {
+            if (rangoMax < 0) throw new IllegalArgumentException("Rango máximo no puede ser negativo");
+            this.rangoMax = rangoMax;
+            return this;
+        }
+
+        public Builder latenciaMax(int latenciaMax) {
+            if (latenciaMax <= 0) throw new IllegalArgumentException("Latencia debe ser positiva");
+            this.latenciaMax = latenciaMax;
+            return this;
+        }
+
+        public Builder cuposMaximos(int cupos) {
+            if (cupos <= 0) throw new IllegalArgumentException("Cupos debe ser positivo");
+            this.cuposMaximos = cupos;
+            return this;
+        }
+
+        /**
+         * Construye el Scrim validando restricciones
+         */
+        public Scrim build() {
+            // Validaciones
+            if (rangoMin > rangoMax) {
+                throw new IllegalStateException("Rango mínimo no puede ser mayor que rango máximo");
+            }
+            
+            return new Scrim(this);
+        }
     }
-    
-    public boolean estaLleno() {
-        return postulaciones.size() >= cuposTotales;
-    }
-    
-    public int cuposDisponibles() {
-        return cuposTotales - postulaciones.size();
+
+    @Override
+    public String toString() {
+        return String.format("Scrim[%s | %s | %s | %s | Rango: %d-%d | Latencia: <%dms | Estado: %s]",
+            juego, formato, region, modalidad, rangoMin, rangoMax, latenciaMax, 
+            estado != null ? estado.getClass().getSimpleName() : "null");
     }
 }

@@ -1,113 +1,58 @@
 package commands;
 
-import models.Scrim;
+import interfaces.IScrimCommand;
+import context.ScrimContext;
 import models.Usuario;
-import java.time.LocalDateTime;
 
 /**
- * RF6: Command para intercambiar jugadores entre equipos.
- * 
- * Casos de uso:
- * - Balanceo de equipos tras cancelación
- * - Ajuste de skill rating
- * - Resolver conflictos de disponibilidad
- * 
- * @pattern Command
+ * Comando concreto que intercambia los roles de dos jugadores
+ * Implementa el patrón COMMAND con capacidad de undo
  */
-public class SwapJugadoresCommand implements ScrimCommand {
+public class SwapJugadoresCommand implements IScrimCommand {
     
-    private Scrim scrim;
     private Usuario jugador1;
     private Usuario jugador2;
-    private LocalDateTime timestamp;
-    private boolean ejecutado;
     
-    public SwapJugadoresCommand(Scrim scrim, Usuario jugador1, Usuario jugador2) {
-        this.scrim = scrim;
+    /**
+     * Constructor del comando
+     * @param jugador1 Primer jugador del intercambio
+     * @param jugador2 Segundo jugador del intercambio
+     */
+    public SwapJugadoresCommand(Usuario jugador1, Usuario jugador2) {
         this.jugador1 = jugador1;
         this.jugador2 = jugador2;
-        this.timestamp = LocalDateTime.now();
-        this.ejecutado = false;
     }
     
     @Override
-    public void ejecutar() {
-        if (ejecutado) {
-            System.out.println("⚠️ [COMMAND] Ya ejecutado, use deshacer() primero");
-            return;
-        }
+    public void execute(ScrimContext ctx) {
+        // Intercambiar roles entre los dos jugadores
+        String rolTemp = jugador1.getRol();
+        jugador1.setRol(jugador2.getRol());
+        jugador2.setRol(rolTemp);
         
-        // Validar que ambos jugadores estén en el scrim
-        if (!validarJugadoresEnScrim()) {
-            System.out.println("❌ [COMMAND] Jugadores no pertenecen al scrim");
-            return;
-        }
-        
-        // Realizar swap
-        intercambiarJugadores();
-        ejecutado = true;
-        
-        System.out.println("🔄 [COMMAND] Jugadores intercambiados:");
-        System.out.println("   " + jugador1.getUsername() + " ↔ " + jugador2.getUsername());
-        System.out.println("   Scrim: " + scrim.getId());
-        System.out.println("   Timestamp: " + timestamp);
+        System.out.println("[COMMAND] Roles intercambiados:");
+        System.out.println("  " + jugador1.getUsername() + " → " + jugador1.getRol());
+        System.out.println("  " + jugador2.getUsername() + " → " + jugador2.getRol());
     }
     
     @Override
-    public void deshacer() {
-        if (!ejecutado) {
-            System.out.println("⚠️ [UNDO] Comando no ejecutado, nada que deshacer");
-            return;
-        }
+    public void undo(ScrimContext ctx) {
+        // Deshacer es simplemente volver a intercambiar
+        String rolTemp = jugador1.getRol();
+        jugador1.setRol(jugador2.getRol());
+        jugador2.setRol(rolTemp);
         
-        // El swap es simétrico, solo volvemos a intercambiar
-        intercambiarJugadores();
-        ejecutado = false;
-        
-        System.out.println("↩️ [UNDO] Swap revertido:");
-        System.out.println("   " + jugador1.getUsername() + " ↔ " + jugador2.getUsername());
+        System.out.println("[COMMAND UNDO] Roles restaurados:");
+        System.out.println("  " + jugador1.getUsername() + " → " + jugador1.getRol());
+        System.out.println("  " + jugador2.getUsername() + " → " + jugador2.getRol());
     }
     
-    @Override
-    public String getDescripcion() {
-        return String.format("[SwapJugadores] %s ↔ %s en Scrim %s (%s)",
-            jugador1.getUsername(), jugador2.getUsername(), 
-            scrim.getId().toString().substring(0, 8), timestamp);
+    // Getters para testing
+    public Usuario getJugador1() {
+        return jugador1;
     }
     
-    /**
-     * Valida que ambos jugadores estén en el scrim.
-     */
-    private boolean validarJugadoresEnScrim() {
-        // En producción verificaría:
-        // - scrim.getEquipo1().contieneJugador(jugador1) || scrim.getEquipo2().contieneJugador(jugador1)
-        // - scrim.getEquipo1().contieneJugador(jugador2) || scrim.getEquipo2().contieneJugador(jugador2)
-        
-        // Simulación
-        return true;
-    }
-    
-    /**
-     * Intercambia los jugadores entre equipos.
-     */
-    private void intercambiarJugadores() {
-        // En producción:
-        // 1. Detectar en qué equipo está cada jugador
-        // 2. Remover de sus equipos actuales
-        // 3. Agregar al equipo contrario
-        // 4. Mantener roles si es posible
-        // 5. Recalcular balance de equipos
-        
-        // Simulación
-        System.out.println("   [DB] Equipos actualizados en base de datos");
-        System.out.println("   [STATS] Balance recalculado: " + calcularBalance() + "%");
-    }
-    
-    /**
-     * Calcula el balance de equipos tras el swap.
-     */
-    private int calcularBalance() {
-        // Simulación: retornar balance entre 0-100%
-        return (int) (Math.random() * 30) + 70; // 70-100%
+    public Usuario getJugador2() {
+        return jugador2;
     }
 }

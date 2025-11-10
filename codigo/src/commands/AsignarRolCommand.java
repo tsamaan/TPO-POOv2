@@ -1,81 +1,65 @@
 package commands;
 
-import models.Scrim;
+import interfaces.IScrimCommand;
+import context.ScrimContext;
 import models.Usuario;
-import java.time.LocalDateTime;
 
 /**
- * RF6: Command para asignar roles a jugadores en un Scrim.
- * 
- * Ejemplo: En LoL asignar Top, Jungle, Mid, ADC, Support
- * 
- * @pattern Command
+ * Comando concreto que asigna un rol a un usuario
+ * Implementa el patrón COMMAND con capacidad de undo
  */
-public class AsignarRolCommand implements ScrimCommand {
+public class AsignarRolCommand implements IScrimCommand {
     
-    private Scrim scrim;
-    private Usuario jugador;
-    private String nuevoRol;
-    private String rolAnterior; // Para undo
-    private LocalDateTime timestamp;
+    private Usuario usuario;
+    private String rol;
+    private String rolAnterior;
     
-    public AsignarRolCommand(Scrim scrim, Usuario jugador, String nuevoRol) {
-        this.scrim = scrim;
-        this.jugador = jugador;
-        this.nuevoRol = nuevoRol;
-        this.timestamp = LocalDateTime.now();
+    /**
+     * Constructor del comando
+     * @param usuario Usuario al que se le asignará el rol
+     * @param rol Nuevo rol a asignar
+     */
+    public AsignarRolCommand(Usuario usuario, String rol) {
+        this.usuario = usuario;
+        this.rol = rol;
+        this.rolAnterior = null; // Se guardará al ejecutar
     }
     
     @Override
-    public void ejecutar() {
-        // Guardar rol anterior para undo
-        this.rolAnterior = obtenerRolActual();
+    public void execute(ScrimContext ctx) {
+        // Guardar el rol anterior para poder hacer undo
+        this.rolAnterior = usuario.getRol();
         
-        // Asignar nuevo rol
-        asignarRol(nuevoRol);
+        // Asignar el nuevo rol
+        usuario.setRol(rol);
         
-        // Log del cambio
-        System.out.println("✅ [COMMAND] Rol asignado: " + jugador.getUsername() + " → " + nuevoRol);
-        System.out.println("   Scrim: " + scrim.getId());
-        System.out.println("   Timestamp: " + timestamp);
+        System.out.println("[COMMAND] Rol asignado a " + usuario.getUsername() + 
+                         ": " + rolAnterior + " → " + rol);
     }
     
     @Override
-    public void deshacer() {
+    public void undo(ScrimContext ctx) {
         if (rolAnterior != null) {
-            asignarRol(rolAnterior);
-            System.out.println("↩️ [UNDO] Rol restaurado: " + jugador.getUsername() + " → " + rolAnterior);
+            // Restaurar el rol anterior
+            usuario.setRol(rolAnterior);
+            
+            System.out.println("[COMMAND UNDO] Rol restaurado para " + usuario.getUsername() + 
+                             ": " + rol + " → " + rolAnterior);
         } else {
-            System.out.println("⚠️ [UNDO] No hay rol anterior para restaurar");
+            System.out.println("[COMMAND UNDO] No hay rol anterior para restaurar");
         }
     }
     
-    @Override
-    public String getDescripcion() {
-        return String.format("[AsignarRol] %s → %s en Scrim %s (%s)",
-            jugador.getUsername(), nuevoRol, scrim.getId().toString().substring(0, 8), timestamp);
+    // Getters para testing
+    public Usuario getUsuario() {
+        return usuario;
     }
     
-    /**
-     * Obtiene el rol actual del jugador en el scrim.
-     * Simula búsqueda en la estructura del scrim.
-     */
-    private String obtenerRolActual() {
-        // En producción buscaría en scrim.getEquipo1().getJugadores() o scrim.getRolesAsignados()
-        // Por ahora simular
-        return "Sin Rol";
+    public String getRol() {
+        return rol;
     }
     
-    /**
-     * Asigna el rol al jugador.
-     * En producción actualizaría la estructura interna del Scrim.
-     */
-    private void asignarRol(String rol) {
-        // Aquí se actualizaría:
-        // - scrim.getRolesAsignados().put(jugador.getId(), rol)
-        // - O scrim.getEquipo1().asignarRol(jugador, rol)
-        
-        // Simulación
-        System.out.println("   [DB] Rol actualizado en base de datos");
+    public String getRolAnterior() {
+        return rolAnterior;
     }
 }

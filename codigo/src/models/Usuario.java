@@ -2,6 +2,8 @@ package models;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Usuario {
     // Identificación y autenticación
@@ -10,6 +12,7 @@ public class Usuario {
     private String email;
     private Map<String, Integer> rangoPorJuego;
     private String rol; // Rol asignado en el scrim (para patrón Command)
+    private List<Notificacion> notificaciones; // Lista de notificaciones recibidas
 
     public Usuario(int id, String username, String email) {
         this.id = id;
@@ -17,6 +20,7 @@ public class Usuario {
         this.email = email;
         this.rol = null; // Sin rol asignado inicialmente
         this.rangoPorJuego = new HashMap<>();
+        this.notificaciones = new ArrayList<>();
     }
 
     // Getters básicos
@@ -30,4 +34,13 @@ public class Usuario {
     // Métodos para gestión de rol (patrón Command)
     public String getRol() { return rol; }
     public void setRol(String rol) { this.rol = rol; }
+    
+    // Métodos para gestión de notificaciones (RF7)
+    public void agregarNotificacion(Notificacion notificacion) {
+        this.notificaciones.add(notificacion);
+    }
+    
+    public List<Notificacion> getNotificaciones() {
+        return notificaciones;
+    }
 }

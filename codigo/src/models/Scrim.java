@@ -111,6 +111,54 @@ public class Scrim {
     public void setFormato(String formato) { this.formato = formato; }
     public void setRegion(String region) { this.region = region; }
     public void setModalidad(String modalidad) { this.modalidad = modalidad; }
+    
+    // === Métodos de compatibilidad con código legacy ===
+    
+    // Getters con nombres alternativos (compatibilidad con NotificationService y otros)
+    public String getRangoMinimo() { 
+        // Convertir MMR numérico a rango string (simplificado)
+        return convertirMMRaRango(rangoMin); 
+    }
+    
+    public String getRangoMaximo() { 
+        return convertirMMRaRango(rangoMax); 
+    }
+    
+    public int getLatenciaMaxima() { return latenciaMax; }
+    
+    public java.time.LocalDateTime getFechaHora() { 
+        // Por ahora retornar fecha actual + 1 hora (placeholder)
+        return java.time.LocalDateTime.now().plusHours(1); 
+    }
+    
+    public int getDuracionEstimada() { 
+        // Duración estimada por defecto: 60 minutos
+        return 60; 
+    }
+    
+    public boolean cumpleRequisitos(Usuario usuario) {
+        // Validación simplificada
+        if (this.region != null && usuario.getRangoPorJuego() != null) {
+            // Por ahora solo verificar que exista
+            return true;
+        }
+        return true;
+    }
+    
+    /**
+     * Convierte MMR numérico a rango de League of Legends (simplificado)
+     */
+    private String convertirMMRaRango(int mmr) {
+        if (mmr >= 2400) return "Challenger";
+        if (mmr >= 2200) return "Grandmaster";
+        if (mmr >= 2000) return "Master";
+        if (mmr >= 1600) return "Diamond";
+        if (mmr >= 1200) return "Platinum";
+        if (mmr >= 800) return "Gold";
+        if (mmr >= 400) return "Silver";
+        if (mmr >= 100) return "Bronze";
+        return "Iron";
+    }
 
     /**
      * Builder interno para construcción fluida de Scrim

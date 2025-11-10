@@ -31,7 +31,7 @@ public class Main {
     };
     
     private static final String[] ROLES = {
-        "Duelist", "Support", "Controller", "Initiator", "Sentinel"
+        "Top", "Support", "ADC", "Jungla", "Mid"
     };
     
     public static void main(String[] args) {
@@ -48,12 +48,12 @@ public class Main {
      */
     private static void printHeader() {
         System.out.println("\n" + SEPARATOR);
-        System.out.println("╔═══════════════════════════════════════════════════════════════════════════════╗");
-        System.out.println("║                                                                               ║");
-        System.out.println("║                   eScrims - Plataforma de eSports                             ║");
-        System.out.println("║                   Demostracion de Patrones de Diseño                          ║");
-        System.out.println("║                                                                               ║");
-        System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
+        System.out.println("╔═════════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                                                                             ║");
+        System.out.println("║                   eScrims - Plataforma de eSports                           ║");
+        System.out.println("║                   Demostracion de Patrones de Diseño                        ║");
+        System.out.println("║                                                                             ║");
+        System.out.println("╚═════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
     }
     
@@ -95,24 +95,44 @@ public class Main {
         System.out.println("[!] LOGIN - Sistema de Autenticación");
         System.out.println(LINE + "\n");
         
-        System.out.print("[>] Ingresa tu nombre de usuario: ");
-        String username = scanner.nextLine().trim();
+        String username = "";
+        String email = "";
+        String password = "";
         
-        System.out.print("[>] Ingresa tu email: ");
-        String email = scanner.nextLine().trim();
+        // Solicitar nombre de usuario (obligatorio)
+        while (username.isEmpty()) {
+            System.out.print("[>] Ingresa tu nombre de usuario: ");
+            username = scanner.nextLine().trim();
+            if (username.isEmpty()) {
+                System.out.println("[!] El nombre de usuario no puede estar vacío. Intenta nuevamente.");
+            }
+        }
         
-        System.out.print("[>] Ingresa tu contraseña: ");
-        String password = scanner.nextLine().trim();
+        // Solicitar email (obligatorio)
+        while (email.isEmpty()) {
+            System.out.print("[>] Ingresa tu email: ");
+            email = scanner.nextLine().trim();
+            if (email.isEmpty()) {
+                System.out.println("[!] El email no puede estar vacío. Intenta nuevamente.");
+            }
+        }
+        
+        // Solicitar contraseña (obligatorio)
+        while (password.isEmpty()) {
+            System.out.print("[>] Ingresa tu contraseña: ");
+            password = scanner.nextLine().trim();
+            if (password.isEmpty()) {
+                System.out.println("[!] La contraseña no puede estar vacía. Intenta nuevamente.");
+            }
+        }
         
         // Autenticar usando el patrón Adapter
         AuthService authService = new AuthService();
         AuthController authController = new AuthController(authService);
-        Usuario usuario = authController.login(email, password);
+        authController.login(email, password);
         
-        // Actualizar username si el usuario lo ingresó
-        if (!username.isEmpty()) {
-            usuario = new Usuario(usuario.getId(), username, usuario.getEmail());
-        }
+        // Crear usuario con los datos ingresados
+        Usuario usuario = new Usuario(1, username, email);
         
         System.out.println("\n[+] ¡Bienvenido, " + usuario.getUsername() + "!");
         System.out.println("[+] Email: " + usuario.getEmail());
@@ -176,7 +196,10 @@ public class Main {
         System.out.println(LINE + "\n");
         
         List<Usuario> jugadoresEncontrados = new ArrayList<>();
+        List<String> rolesAsignados = new ArrayList<>();
+        
         jugadoresEncontrados.add(usuarioActual);
+        rolesAsignados.add(rolSeleccionado);
         
         Random random = new Random();
         int jugadoresNecesarios = 8;
@@ -193,12 +216,30 @@ public class Main {
             String botName = BOT_NAMES[i];
             String botEmail = botName.toLowerCase() + "@esports.com";
             Usuario bot = new Usuario(i + 1, botName, botEmail);
-            String botRol = ROLES[random.nextInt(ROLES.length)];
+            
+            // Asignar rol asegurando balance (máximo 2 por rol - 1 por equipo)
+            String botRol = asignarRolBalanceado(rolesAsignados, random);
+            rolesAsignados.add(botRol);
             
             jugadoresEncontrados.add(bot);
             context.postular(bot, botRol);
             
             System.out.println("[" + (i + 1) + "/8] Jugador encontrado: " + botName + " (" + botRol + ")");
+        }
+        
+        // Mostrar resumen de roles
+        System.out.println("\n[*] Resumen de roles en el lobby:");
+        int[] contadorRoles = new int[ROLES.length];
+        for (String rol : rolesAsignados) {
+            for (int i = 0; i < ROLES.length; i++) {
+                if (ROLES[i].equals(rol)) {
+                    contadorRoles[i]++;
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < ROLES.length; i++) {
+            System.out.println("    • " + ROLES[i] + ": " + contadorRoles[i] + " jugador(es)");
         }
         
         // Ejecutar matchmaking (Patrón Strategy)
@@ -229,26 +270,40 @@ public class Main {
         }
         
         // Mostrar equipos
-        System.out.println("╔═══════════════════════════════════════════════════════════════╗");
-        System.out.println("║                      EQUIPOS FORMADOS                         ║");
-        System.out.println("╠═══════════════════════════════════════════════════════════════╣");
-        System.out.println("║                                                               ║");
-        System.out.println("║  " + String.format("%-59s", equipoAzul.getLado()) + "║");
-        for (Usuario jugador : equipoAzul.getJugadores()) {
-            String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? " ★ " : "   ";
-            System.out.println("║  " + marker + String.format("%-56s", jugador.getUsername()) + "║");
+        System.out.println("╔═══════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                         EQUIPOS FORMADOS                              ║");
+        System.out.println("╠═══════════════════════════════════════════════════════════════════════╣");
+        System.out.println("║                                                                       ║");
+        System.out.println("║  " + String.format("%-67s", equipoAzul.getLado()) + "  ║");
+        System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
+        System.out.println("║     Jugador                                              Rol          ║");
+        System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
+        for (int i = 0; i < equipoAzul.getJugadores().size(); i++) {
+            Usuario jugador = equipoAzul.getJugadores().get(i);
+            String rol = rolesAsignados.get(jugadoresEncontrados.indexOf(jugador));
+            String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? "*" : " ";
+            String nombre = String.format("%-50s", marker + " " + jugador.getUsername());
+            String rolFormato = String.format("%-10s", rol);
+            System.out.println("║   " + nombre + "  " + rolFormato + "      ║");
         }
-        System.out.println("║                                                               ║");
-        System.out.println("╠═══════════════════════════════════════════════════════════════╣");
-        System.out.println("║                                                               ║");
-        System.out.println("║  " + String.format("%-59s", equipoRojo.getLado()) + "║");
-        for (Usuario jugador : equipoRojo.getJugadores()) {
-            String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? " ★ " : "   ";
-            System.out.println("║  " + marker + String.format("%-56s", jugador.getUsername()) + "║");
+        System.out.println("║                                                                       ║");
+        System.out.println("╠═══════════════════════════════════════════════════════════════════════╣");
+        System.out.println("║                                                                       ║");
+        System.out.println("║  " + String.format("%-67s", equipoRojo.getLado()) + "  ║");
+        System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
+        System.out.println("║     Jugador                                              Rol          ║");
+        System.out.println("║  ───────────────────────────────────────────────────────────────────  ║");
+        for (int i = 0; i < equipoRojo.getJugadores().size(); i++) {
+            Usuario jugador = equipoRojo.getJugadores().get(i);
+            String rol = rolesAsignados.get(jugadoresEncontrados.indexOf(jugador));
+            String marker = jugador.getUsername().equals(usuarioActual.getUsername()) ? "*" : " ";
+            String nombre = String.format("%-50s", marker + " " + jugador.getUsername());
+            String rolFormato = String.format("%-10s", rol);
+            System.out.println("║   " + nombre + "  " + rolFormato + "      ║");
         }
-        System.out.println("║                                                               ║");
-        System.out.println("╚═══════════════════════════════════════════════════════════════╝");
-        System.out.println("\n[★] Indica tu posición en el equipo\n");
+        System.out.println("║                                                                       ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════════════╝");
+        System.out.println("\n[*] Indica tu posición en el equipo\n");
         
         // Proceso de confirmación
         procesarConfirmaciones(usuarioActual, jugadoresEncontrados, scrim);
@@ -281,6 +336,43 @@ public class Main {
         // Rol por defecto si la selección es inválida
         System.out.println("[!] Selección inválida, asignando rol: " + ROLES[0]);
         return ROLES[0];
+    }
+    
+    /**
+     * Asigna un rol de forma balanceada (máximo 2 jugadores por rol - 1 por equipo)
+     */
+    private static String asignarRolBalanceado(List<String> rolesAsignados, Random random) {
+        // Contar cuántos jugadores hay de cada rol
+        int[] contadorRoles = new int[ROLES.length];
+        for (String rol : rolesAsignados) {
+            for (int i = 0; i < ROLES.length; i++) {
+                if (ROLES[i].equals(rol)) {
+                    contadorRoles[i]++;
+                    break;
+                }
+            }
+        }
+        
+        // Crear lista de roles disponibles (que tengan menos de 2 jugadores)
+        List<String> rolesDisponibles = new ArrayList<>();
+        for (int i = 0; i < ROLES.length; i++) {
+            if (contadorRoles[i] < 2) {
+                rolesDisponibles.add(ROLES[i]);
+            }
+        }
+        
+        // Si todos los roles tienen 2 jugadores pero aún faltan jugadores
+        // (caso de más de 10 jugadores), permitir roles con 2
+        if (rolesDisponibles.isEmpty()) {
+            for (int i = 0; i < ROLES.length; i++) {
+                if (contadorRoles[i] == 2) {
+                    rolesDisponibles.add(ROLES[i]);
+                }
+            }
+        }
+        
+        // Seleccionar un rol aleatorio de los disponibles
+        return rolesDisponibles.get(random.nextInt(rolesDisponibles.size()));
     }
     
     /**
@@ -351,7 +443,7 @@ public class Main {
         System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
         
         System.out.println("\n[*] La partida está en curso...");
-        System.out.println("[*] Duración estimada: 25-30 minutos");
+        System.out.println("[*] Duración estimada: 30-90 minutos");
         
         try {
             Thread.sleep(2000);

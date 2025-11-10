@@ -86,18 +86,18 @@
 - Partidas competitivas → MMR Strategy
 - Partidas casuales → Latency Strategy
 
-**Sin Strategy:**
+**❌ Sin Strategy (el problema):**
 ```
-❌ if (tipoPartida == "ranked") { código MMR }
-❌ else if (tipoPartida == "casual") { código latencia }
-❌ Modificar servicio para cada nuevo algoritmo
+1. Código lleno de if/else para cada algoritmo
+2. Agregar nuevo algoritmo = modificar MatchmakingService
+3. Imposible cambiar algoritmo en tiempo de ejecución
 ```
 
-**Con Strategy:**
+**✅ Con Strategy (la solución):**
 ```
-✅ matchmaking.setStrategy(new ByMMRStrategy());
-✅ matchmaking.setStrategy(new ByLatencyStrategy());
-✅ Nuevos algoritmos sin tocar código existente
+1. Cada algoritmo = 1 clase independiente
+2. Cambiar algoritmo = 1 línea: setStrategy(new ByMMRStrategy())
+3. Agregar algoritmo = crear nueva clase, sin tocar nada más
 ```
 
 **Dónde está en el código:**

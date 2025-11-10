@@ -76,6 +76,9 @@ public class Main {
                     buscarPartida(usuarioActual);
                     break;
                 case "2":
+                    ejecutarDemoCompleta();
+                    break;
+                case "3":
                     System.out.println("\n[!] Saliendo de eScrims...");
                     System.out.println("[+] ¡Hasta pronto, " + usuarioActual.getUsername() + "!");
                     enJuego = false;
@@ -148,7 +151,8 @@ public class Main {
         System.out.println("[!] MENU PRINCIPAL - " + usuario.getUsername());
         System.out.println(LINE);
         System.out.println("\n[1] Buscar Partida (Scrim)");
-        System.out.println("[2] Salir");
+        System.out.println("[2] Ver Demo Completa de Patrones");
+        System.out.println("[3] Salir");
         System.out.print("\n[>] Selecciona una opción: ");
     }
     
@@ -171,10 +175,18 @@ public class Main {
         INotifier pushNotifier = factory.createPushNotifier();
         System.out.println("[+] Sistema de notificaciones activo");
         
-        // Crear nuevo scrim (Patrón State)
-        System.out.println("\n[*] Creando nueva sala de matchmaking...");
+        // Crear nuevo scrim usando BUILDER (Patrón Builder)
+        System.out.println("\n[*] Creando nueva sala de matchmaking usando Builder...");
         ScrimState estadoInicial = new EstadoBuscandoJugadores();
-        Scrim scrim = new Scrim(estadoInicial);
+        Scrim scrim = new Scrim.Builder(estadoInicial)
+            .juego("Valorant")
+            .formato("5v5")
+            .region("SA")
+            .modalidad("ranked")
+            .rangoMin(1000)
+            .rangoMax(2000)
+            .latenciaMax(80)
+            .build();
         
         // Agregar notificadores (Patrón Observer)
         scrim.addNotifier(emailNotifier);
@@ -695,6 +707,55 @@ public class Main {
     }
     
     /**
+     * Ejecuta una demostracion completa de todos los patrones de diseño
+     */
+    private static void ejecutarDemoCompleta() {
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("╔═══════════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                                                                               ║");
+        System.out.println("║                    DEMOSTRACION COMPLETA DE PATRONES                          ║");
+        System.out.println("║                                                                               ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
+        System.out.println(SEPARATOR + "\n");
+        
+        pause();
+        
+        // 1. Adapter Pattern
+        demonstrateAdapterPattern();
+        pause();
+        
+        // 2. Abstract Factory Pattern  
+        NotifierFactory factory = demonstrateAbstractFactoryPattern();
+        pause();
+        
+        // 3. State & Observer Pattern
+        Scrim scrim = demonstrateStatePattern(factory);
+        pause();
+        
+        // 4. Strategy Pattern
+        demonstrateStrategyPattern(scrim);
+        pause();
+        
+        // 5. State Transitions
+        demonstrateStateTransitions(scrim);
+        pause();
+        
+        // 6. Builder Pattern
+        demonstrateBuilderPattern();
+        pause();
+        
+        // 7. Composite Pattern
+        demonstrateCompositePattern();
+        pause();
+        
+        // 8. Domain Model
+        demonstrateDomainModel(scrim);
+        
+        // Footer
+        printFooter();
+    }
+
+    /**
      * Imprime el pie de pagina
      */
     private static void printFooter() {
@@ -703,12 +764,16 @@ public class Main {
         System.out.println("║                                                                               ║");
         System.out.println("║                 DEMOSTRACION COMPLETADA EXITOSAMENTE                          ║");
         System.out.println("║                                                                               ║");
-        System.out.println("║              Todos los patrones implementados:                                ║");
-        System.out.println("║              • Patron ADAPTER                                                 ║");
-        System.out.println("║              • Patron ABSTRACT FACTORY                                        ║");
-        System.out.println("║              • Patron STATE                                                   ║");
-        System.out.println("║              • Patron STRATEGY                                                ║");
-        System.out.println("║              • Patron OBSERVER                                                ║");
+        System.out.println("║              ✅ Todos los patrones implementados (8 total):                   ║");
+        System.out.println("║                                                                               ║");
+        System.out.println("║              1. Patron ADAPTER        - Autenticacion multiple                ║");
+        System.out.println("║              2. Patron ABSTRACT FACTORY - Creacion de notificadores           ║");
+        System.out.println("║              3. Patron STATE          - Estados del scrim                     ║");
+        System.out.println("║              4. Patron STRATEGY       - Algoritmos de matchmaking             ║");
+        System.out.println("║              5. Patron OBSERVER       - Sistema de notificaciones             ║");
+        System.out.println("║              6. Patron COMMAND        - Acciones reversibles                  ║");
+        System.out.println("║              7. Patron BUILDER        - Construccion de scrims                ║");
+        System.out.println("║              8. Patron COMPOSITE      - Grupos de notificadores               ║");
         System.out.println("║                                                                               ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════════════╝");
         System.out.println(SEPARATOR + "\n");
@@ -914,10 +979,119 @@ public class Main {
     }
     
     /**
+     * Demuestra el patron BUILDER para creacion de Scrims
+     */
+    private static void demonstrateBuilderPattern() {
+        printSectionTitle("6", "BUILDER", "Construccion fluida de objetos complejos");
+        
+        System.out.println("[!] Creando Scrims con diferentes configuraciones usando Builder...\n");
+        
+        // Scrim 1: Ranked competitivo
+        System.out.println("[*] Scrim #1: Partida Ranked Competitiva");
+        Scrim scrimRanked = new Scrim.Builder(new EstadoBuscandoJugadores())
+            .juego("Valorant")
+            .formato("5v5")
+            .region("SA")
+            .modalidad("ranked")
+            .rangoMin(1500)
+            .rangoMax(2000)
+            .latenciaMax(50)
+            .build();
+        
+        System.out.println("   " + scrimRanked);
+        System.out.println();
+        
+        // Scrim 2: Casual relajado
+        System.out.println("[*] Scrim #2: Partida Casual");
+        Scrim scrimCasual = new Scrim.Builder(new EstadoBuscandoJugadores())
+            .juego("League of Legends")
+            .formato("5v5")
+            .region("NA")
+            .modalidad("casual")
+            .rangoMin(0)
+            .rangoMax(3000)
+            .latenciaMax(100)
+            .build();
+        
+        System.out.println("   " + scrimCasual);
+        System.out.println();
+        
+        // Scrim 3: Torneo con restricciones estrictas
+        System.out.println("[*] Scrim #3: Torneo Pro");
+        Scrim scrimTorneo = new Scrim.Builder(new EstadoBuscandoJugadores())
+            .juego("CS:GO")
+            .formato("5v5")
+            .region("EU")
+            .modalidad("tournament")
+            .rangoMin(2500)
+            .rangoMax(3000)
+            .latenciaMax(30)
+            .build();
+        
+        System.out.println("   " + scrimTorneo);
+        System.out.println();
+        
+        System.out.println("[!] Ventajas del Builder:");
+        System.out.println("   • Construccion legible y fluida");
+        System.out.println("   • Validaciones integradas");
+        System.out.println("   • Parametros opcionales con valores por defecto");
+        System.out.println("   • Codigo mas mantenible y extensible");
+    }
+    
+    /**
+     * Demuestra el patron COMPOSITE para grupos de notificaciones
+     */
+    private static void demonstrateCompositePattern() {
+        printSectionTitle("7", "COMPOSITE", "Jerarquias de objetos con tratamiento uniforme");
+        
+        System.out.println("[!] Creando grupos de notificadores (Composite)...\n");
+        
+        // Crear notificadores individuales (leafs)
+        interfaces.INotificationComponent email = new EmailNotifier();
+        interfaces.INotificationComponent discord = new DiscordNotifier();
+        interfaces.INotificationComponent push = new PushNotifier();
+        
+        System.out.println("[*] Notificadores individuales creados:");
+        System.out.println("   • " + email.getName());
+        System.out.println("   • " + discord.getName());
+        System.out.println("   • " + push.getName());
+        System.out.println();
+        
+        // Crear grupos (composites)
+        NotificationGroup allChannels = new NotificationGroup("AllChannels");
+        allChannels.add(email);
+        allChannels.add(discord);
+        allChannels.add(push);
+        System.out.println();
+        
+        NotificationGroup criticalOnly = new NotificationGroup("CriticalOnly");
+        criticalOnly.add(discord);
+        criticalOnly.add(push);
+        System.out.println();
+        
+        // Demostrar envio con composite
+        System.out.println("[*] DEMOSTRACION: Enviando notificacion a todos los canales");
+        Notificacion notif1 = new Notificacion("¡Scrim confirmado! La partida comienza en 5 minutos.");
+        allChannels.sendNotification(notif1);
+        System.out.println();
+        
+        System.out.println("[*] DEMOSTRACION: Enviando alerta critica solo a Discord y Push");
+        Notificacion notif2 = new Notificacion("⚠️ ALERTA: Jugador desconectado, buscando reemplazo...");
+        criticalOnly.sendNotification(notif2);
+        System.out.println();
+        
+        System.out.println("[!] Ventajas del Composite:");
+        System.out.println("   • Trata objetos individuales y grupos de forma uniforme");
+        System.out.println("   • Permite crear jerarquias complejas de notificaciones");
+        System.out.println("   • Facil agregar nuevos canales sin modificar codigo existente");
+        System.out.println("   • Perfecto para configuraciones dinamicas (dev/prod/testing)");
+    }
+
+    /**
      * Demuestra el modelo de dominio completo
      */
     private static void demonstrateDomainModel(Scrim scrim) {
-        printSectionTitle("6", "DOMAIN MODEL", "Equipos, Confirmaciones y Estadisticas");
+        printSectionTitle("8", "DOMAIN MODEL", "Equipos, Confirmaciones y Estadisticas");
         
         // Crear jugadores para el modelo de dominio
         Usuario[] players = {

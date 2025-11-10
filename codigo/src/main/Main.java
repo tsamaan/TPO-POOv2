@@ -303,7 +303,10 @@ public class Main {
         }
         System.out.println("║                                                                       ║");
         System.out.println("╚═══════════════════════════════════════════════════════════════════════╝");
-        System.out.println("\n[*] Indica tu posición en el equipo\n");
+        System.out.println("\n[★] Indica tu posición en el equipo\n");
+        
+        // Gestión de roles con patrón COMMAND
+        gestionarRolesConComandos(usuarioActual, jugadoresEncontrados, rolesAsignados, context);
         
         // Proceso de confirmación
         procesarConfirmaciones(usuarioActual, jugadoresEncontrados, scrim);
@@ -373,6 +376,163 @@ public class Main {
         
         // Seleccionar un rol aleatorio de los disponibles
         return rolesDisponibles.get(random.nextInt(rolesDisponibles.size()));
+    }
+    
+    /**
+     * Gestiona roles usando el patrón COMMAND
+     * Permite al usuario ajustar roles con capacidad de undo
+     */
+    private static void gestionarRolesConComandos(Usuario usuarioActual, List<Usuario> jugadores, 
+                                                   List<String> rolesAsignados, ScrimContext context) {
+        System.out.println(LINE);
+        System.out.println("[!] GESTIÓN DE ROLES (Patrón COMMAND)");
+        System.out.println(LINE + "\n");
+        
+        // Asignar los roles guardados a los usuarios
+        for (int i = 0; i < jugadores.size(); i++) {
+            jugadores.get(i).setRol(rolesAsignados.get(i));
+        }
+        
+        // Crear el gestor de comandos (Invoker)
+        commands.CommandManager commandManager = new commands.CommandManager(context);
+        
+        System.out.println("[*] Como organizador, puedes ajustar los roles antes de confirmar.");
+        System.out.println("[*] Los cambios se pueden deshacer con UNDO.\n");
+        
+        boolean gestionando = true;
+        while (gestionando) {
+            System.out.println("\n[?] Opciones:");
+            System.out.println("  [1] Cambiar rol de un jugador");
+            System.out.println("  [2] Intercambiar roles entre dos jugadores");
+            System.out.println("  [3] Deshacer último cambio");
+            System.out.println("  [4] Continuar a confirmación");
+            System.out.print("\n[>] Selecciona una opción: ");
+            
+            String opcion = scanner.nextLine().trim();
+            
+            switch (opcion) {
+                case "1":
+                    // Asignar nuevo rol
+                    cambiarRolJugador(jugadores, commandManager);
+                    break;
+                    
+                case "2":
+                    // Swap de roles
+                    intercambiarRoles(jugadores, commandManager);
+                    break;
+                    
+                case "3":
+                    // Undo
+                    commandManager.deshacerUltimo();
+                    mostrarRolesActuales(jugadores);
+                    break;
+                    
+                case "4":
+                    // Continuar
+                    System.out.println("\n[+] Roles finalizados. Continuando a confirmación...");
+                    gestionando = false;
+                    break;
+                    
+                default:
+                    System.out.println("[!] Opción inválida");
+                    break;
+            }
+        }
+        
+        // Actualizar la lista de roles asignados con los cambios finales
+        for (int i = 0; i < jugadores.size(); i++) {
+            rolesAsignados.set(i, jugadores.get(i).getRol());
+        }
+        
+        System.out.println();
+    }
+    
+    /**
+     * Cambia el rol de un jugador usando AsignarRolCommand
+     */
+    private static void cambiarRolJugador(List<Usuario> jugadores, commands.CommandManager commandManager) {
+        System.out.println("\n[*] Jugadores disponibles:");
+        for (int i = 0; i < jugadores.size(); i++) {
+            Usuario j = jugadores.get(i);
+            System.out.println("  [" + (i + 1) + "] " + j.getUsername() + " - Rol actual: " + j.getRol());
+        }
+        
+        System.out.print("\n[>] Selecciona jugador (número): ");
+        try {
+            int indice = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            
+            if (indice >= 0 && indice < jugadores.size()) {
+                Usuario jugador = jugadores.get(indice);
+                
+                System.out.println("\n[*] Roles disponibles:");
+                for (int i = 0; i < ROLES.length; i++) {
+                    System.out.println("  [" + (i + 1) + "] " + ROLES[i]);
+                }
+                
+                System.out.print("\n[>] Selecciona nuevo rol (número): ");
+                int rolIndice = Integer.parseInt(scanner.nextLine().trim()) - 1;
+                
+                if (rolIndice >= 0 && rolIndice < ROLES.length) {
+                    // Crear y ejecutar comando
+                    commands.AsignarRolCommand comando = new commands.AsignarRolCommand(jugador, ROLES[rolIndice]);
+                    commandManager.ejecutarComando(comando);
+                    mostrarRolesActuales(jugadores);
+                } else {
+                    System.out.println("[!] Rol inválido");
+                }
+            } else {
+                System.out.println("[!] Jugador inválido");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("[!] Entrada inválida");
+        }
+    }
+    
+    /**
+     * Intercambia roles entre dos jugadores usando SwapJugadoresCommand
+     */
+    private static void intercambiarRoles(List<Usuario> jugadores, commands.CommandManager commandManager) {
+        System.out.println("\n[*] Jugadores disponibles:");
+        for (int i = 0; i < jugadores.size(); i++) {
+            Usuario j = jugadores.get(i);
+            System.out.println("  [" + (i + 1) + "] " + j.getUsername() + " - Rol: " + j.getRol());
+        }
+        
+        try {
+            System.out.print("\n[>] Primer jugador (número): ");
+            int indice1 = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            
+            System.out.print("[>] Segundo jugador (número): ");
+            int indice2 = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            
+            if (indice1 >= 0 && indice1 < jugadores.size() && 
+                indice2 >= 0 && indice2 < jugadores.size() && 
+                indice1 != indice2) {
+                
+                // Crear y ejecutar comando
+                commands.SwapJugadoresCommand comando = new commands.SwapJugadoresCommand(
+                    jugadores.get(indice1), 
+                    jugadores.get(indice2)
+                );
+                commandManager.ejecutarComando(comando);
+                mostrarRolesActuales(jugadores);
+                
+            } else {
+                System.out.println("[!] Jugadores inválidos o iguales");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("[!] Entrada inválida");
+        }
+    }
+    
+    /**
+     * Muestra los roles actuales de todos los jugadores
+     */
+    private static void mostrarRolesActuales(List<Usuario> jugadores) {
+        System.out.println("\n[*] Roles actuales:");
+        for (Usuario j : jugadores) {
+            System.out.println("  • " + j.getUsername() + ": " + j.getRol());
+        }
     }
     
     /**

@@ -227,9 +227,12 @@ public class MatchmakingController {
         // Obtener roles
         List<String> rolesAsignados = obtenerRolesAsignados(jugadores);
 
+        // Generar estadísticas UNA SOLA VEZ (ANTES de transiciones)
+        List<Estadistica> estadisticas = generarEstadisticas(jugadores, scrim);
+
         // PRIMERO: Transiciones de estado (incluye confirmación)
         // Si el usuario rechaza, la función retorna antes de mostrar los equipos
-        boolean partidaConfirmada = ejecutarTransicionesEstado(scrim, context, usuarioActual, jugadores);
+        boolean partidaConfirmada = ejecutarTransicionesEstado(scrim, context, usuarioActual, jugadores, estadisticas);
         
         if (!partidaConfirmada) {
             // Usuario rechazó la confirmación - no continuar
@@ -240,8 +243,8 @@ public class MatchmakingController {
         consoleView.mostrarSubtitulo("FORMANDO EQUIPOS");
         consoleView.mostrarEquipos(equipoAzul, equipoRojo, rolesAsignados, jugadores, usuarioActual);
 
-        // Generar y mostrar estadísticas
-        mostrarEstadisticasFinales(jugadores, scrim, equipoAzul, equipoRojo);
+        // Mostrar estadísticas en terminal (MISMAS que se enviaron por email)
+        mostrarEstadisticasFinales(estadisticas, scrim, equipoAzul, equipoRojo, jugadores);
 
         gameView.mostrarVolviendoMenu();
     }
@@ -282,10 +285,12 @@ public class MatchmakingController {
      * Ejecuta las transiciones de estado de la partida
      * NUEVA LÓGICA: Confirmación manual con sistema de sanciones
      * NUEVO: Envía email con estadísticas al finalizar
+     * REFACTORIZADO: Recibe estadísticas ya generadas para evitar discrepancias
      * @return true si la partida se confirmó y completó, false si fue cancelada
      */
     private boolean ejecutarTransicionesEstado(Scrim scrim, ScrimContext context, 
-                                           Usuario usuarioReal, List<Usuario> todosJugadores) {
+                                           Usuario usuarioReal, List<Usuario> todosJugadores,
+                                           List<Estadistica> estadisticas) {
         consoleView.mostrarSubtitulo("INICIANDO PARTIDA...");
 
         // Transición: Buscando → LobbyCompleto
@@ -322,8 +327,8 @@ public class MatchmakingController {
         gameView.mostrarFinPartida();
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
         
-        // NUEVO: Enviar email con estadísticas finales
-        enviarEmailEstadisticasFinales(scrim, usuarioReal, todosJugadores);
+        // NUEVO: Enviar email con estadísticas finales (MISMAS que se mostrarán en terminal)
+        enviarEmailEstadisticasFinales(scrim, usuarioReal, todosJugadores, estadisticas);
         
         return true;  // Retorna true para indicar que la partida se completó
     }
@@ -404,19 +409,10 @@ public class MatchmakingController {
 
     /**
      * Envía email al usuario con estadísticas finales de la partida
+     * REFACTORIZADO: Recibe las estadísticas ya generadas para evitar discrepancias
      */
-    private void enviarEmailEstadisticasFinales(Scrim scrim, Usuario usuarioReal, List<Usuario> todosJugadores) {
-        Random random = new Random();
-        
-        // Generar estadísticas para todos los jugadores
-        List<Estadistica> estadisticas = new ArrayList<>();
-        for (Usuario jugador : todosJugadores) {
-            int kills = 5 + random.nextInt(18);
-            int deaths = 8 + random.nextInt(12);
-            int assists = 3 + random.nextInt(15);
-            Estadistica stat = new Estadistica(jugador, scrim, kills, deaths, assists);
-            estadisticas.add(stat);
-        }
+    private void enviarEmailEstadisticasFinales(Scrim scrim, Usuario usuarioReal, 
+                                               List<Usuario> todosJugadores, List<Estadistica> estadisticas) {
         
         // Encontrar estadística del usuario real
         Estadistica statUsuario = null;
@@ -496,11 +492,10 @@ public class MatchmakingController {
     // ============================================
 
     /**
-     * Genera y muestra estadísticas finales
+     * Genera estadísticas aleatorias para todos los jugadores
+     * IMPORTANTE: Solo se genera UNA VEZ para evitar discrepancias entre terminal y email
      */
-    private void mostrarEstadisticasFinales(List<Usuario> jugadores, Scrim scrim,
-                                           Equipo equipoAzul, Equipo equipoRojo) {
-
+    private List<Estadistica> generarEstadisticas(List<Usuario> jugadores, Scrim scrim) {
         Random random = new Random();
         List<Estadistica> estadisticas = new ArrayList<>();
 
@@ -513,6 +508,16 @@ public class MatchmakingController {
             Estadistica stat = new Estadistica(jugador, scrim, kills, deaths, assists);
             estadisticas.add(stat);
         }
+
+        return estadisticas;
+    }
+
+    /**
+     * Muestra estadísticas finales en terminal
+     * REFACTORIZADO: Recibe las estadísticas ya generadas
+     */
+    private void mostrarEstadisticasFinales(List<Estadistica> estadisticas, Scrim scrim,
+                                           Equipo equipoAzul, Equipo equipoRojo, List<Usuario> jugadores) {
 
         // Encontrar MVP
         Estadistica mvpStat = estadisticas.stream()

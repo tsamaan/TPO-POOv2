@@ -7,6 +7,7 @@ import service.SalaManager;
 import service.ScrimSearchService;
 import context.ScrimContext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -196,17 +197,45 @@ public class ScrimController {
 
     /**
      * Ejecuta flujo de lobby completo → confirmado → en juego → finalizado
+     * Incluye confirmaciones de jugadores y emails de notificación
      */
     private void ejecutarFlujoLobby(ScrimContext context, Scrim scrim) {
         consoleView.mostrarExito("¡Sala completa! Iniciando partida...");
+
+        // Obtener usuario real (el primer jugador que no es bot)
+        Usuario usuarioReal = null;
+        List<Usuario> todosJugadores = new ArrayList<>();
+        
+        for (models.Postulacion post : scrim.getPostulaciones()) {
+            Usuario jugador = post.getUsuario();
+            todosJugadores.add(jugador);
+            if (jugador.getId() < 100) { // IDs < 100 son usuarios reales
+                usuarioReal = jugador;
+            }
+        }
 
         // Transición: Buscando → LobbyCompleto
         consoleView.delay(1000);
         context.cambiarEstado(new EstadoLobbyCompleto());
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
 
-        // Transición: LobbyCompleto → Confirmado
+        // FASE DE CONFIRMACIÓN
         consoleView.delay(1000);
+        consoleView.mostrarInfo("\n───────────────────────────────────────────────────────────────────────────────");
+        consoleView.mostrarInfo("[!] ⚡ FASE DE CONFIRMACIÓN");
+        consoleView.mostrarInfo("───────────────────────────────────────────────────────────────────────────────");
+        consoleView.mostrarInfo("Debes confirmar tu participación en la partida\n");
+
+        // Procesar confirmaciones (solo pregunta al usuario real)
+        boolean todosConfirmaron = procesarConfirmacionesJugadores(scrim, usuarioReal);
+        
+        if (!todosConfirmaron) {
+            consoleView.mostrarError("Partida cancelada - Un jugador rechazó la confirmación");
+            context.cambiarEstado(new EstadoCancelado());
+            return;
+        }
+
+        // Transición: LobbyCompleto → Confirmado
         context.cambiarEstado(new EstadoConfirmado());
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
 
@@ -222,6 +251,142 @@ public class ScrimController {
         context.cambiarEstado(new EstadoFinalizado());
         gameView.mostrarFinPartida();
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
+
+        // Enviar email con estadísticas finales
+        enviarEmailEstadisticasFinales(scrim, usuarioReal, todosJugadores);
+    }
+
+    /**
+     * Procesa confirmaciones de jugadores (solo pregunta al usuario real)
+     */
+    private boolean procesarConfirmacionesJugadores(Scrim scrim, Usuario usuarioReal) {
+        List<models.Postulacion> postulaciones = scrim.getPostulaciones();
+        int confirmados = 0;
+        int totalJugadores = postulaciones.size();
+
+        for (models.Postulacion postulacion : postulaciones) {
+            Usuario jugador = postulacion.getUsuario();
+            boolean confirma;
+
+            if (jugador.getId() == usuarioReal.getId()) {
+                // Preguntar solo al usuario real
+                consoleView.mostrarInfo("[" + (confirmados + 1) + "/" + totalJugadores + "] " + jugador.getUsername());
+                confirma = consoleView.solicitarConfirmacion("¿Confirmas tu participación? (s/n): ");
+
+                if (!confirma) {
+                    consoleView.mostrarError("Has rechazado la partida");
+                    usuarioReal.agregarSancion();
+                    long minutosBan = usuarioReal.getMinutosRestantesBan();
+                    consoleView.mostrarAdvertencia("SANCIÓN: Baneado por " + minutosBan + " minutos");
+                    return false;
+                }
+            } else {
+                // Bots auto-confirman
+                confirma = true;
+            }
+
+            if (confirma) {
+                confirmados++;
+                consoleView.mostrarExito("✓ " + jugador.getUsername() + " confirmó (" + confirmados + "/" + totalJugadores + ")");
+                consoleView.delay(300);
+            }
+        }
+
+        consoleView.mostrarExito("\n✓ ¡TODOS LOS JUGADORES CONFIRMARON! (" + confirmados + "/" + totalJugadores + ")");
+        return true;
+    }
+
+    /**
+     * Envía email con estadísticas finales del match
+     */
+    private void enviarEmailEstadisticasFinales(Scrim scrim, Usuario usuarioReal, List<Usuario> todosJugadores) {
+        Random random = new Random();
+        
+        // Generar estadísticas para todos los jugadores
+        List<Estadistica> estadisticas = new ArrayList<>();
+        for (Usuario jugador : todosJugadores) {
+            int kills = 5 + random.nextInt(18);
+            int deaths = 8 + random.nextInt(12);
+            int assists = 3 + random.nextInt(15);
+            Estadistica stat = new Estadistica(jugador, scrim, kills, deaths, assists);
+            estadisticas.add(stat);
+        }
+
+        // Encontrar estadísticas del usuario real
+        Estadistica statsUsuario = null;
+        for (int i = 0; i < todosJugadores.size(); i++) {
+            if (todosJugadores.get(i).getId() == usuarioReal.getId()) {
+                statsUsuario = estadisticas.get(i);
+                break;
+            }
+        }
+
+        if (statsUsuario == null) return;
+
+        // Encontrar MVP
+        Estadistica mvp = estadisticas.stream()
+            .max((a, b) -> Double.compare(a.getKda(), b.getKda()))
+            .orElse(estadisticas.get(0));
+
+        // Calcular marcador de equipos (asumiendo equipos balanceados)
+        int killsEquipo1 = 0;
+        int killsEquipo2 = 0;
+        int mitad = todosJugadores.size() / 2;
+
+        for (int i = 0; i < estadisticas.size(); i++) {
+            if (i < mitad) {
+                killsEquipo1 += estadisticas.get(i).getKills();
+            } else {
+                killsEquipo2 += estadisticas.get(i).getKills();
+            }
+        }
+
+        // Determinar si el usuario ganó (está en el equipo con más kills)
+        boolean usuarioEnEquipo1 = todosJugadores.indexOf(usuarioReal) < mitad;
+        boolean gano = (usuarioEnEquipo1 && killsEquipo1 > killsEquipo2) ||
+                      (!usuarioEnEquipo1 && killsEquipo2 > killsEquipo1);
+
+        // Construir mensaje del email
+        StringBuilder mensajeEmail = new StringBuilder();
+        mensajeEmail.append("═══════════════════════════════════════════\n");
+        mensajeEmail.append("📊 RESULTADO: ").append(gano ? "VICTORIA" : "DERROTA").append("\n");
+        mensajeEmail.append("═══════════════════════════════════════════\n\n");
+
+        mensajeEmail.append("🎯 TUS ESTADÍSTICAS:\n");
+        mensajeEmail.append("├─ Kills: ").append(statsUsuario.getKills()).append("\n");
+        mensajeEmail.append("├─ Deaths: ").append(statsUsuario.getDeaths()).append("\n");
+        mensajeEmail.append("├─ Assists: ").append(statsUsuario.getAssists()).append("\n");
+        mensajeEmail.append("├─ KDA: ").append(String.format("%.2f", statsUsuario.getKda())).append("\n");
+        
+        String rendimiento;
+        double kda = statsUsuario.getKda();
+        if (kda >= 3.0) rendimiento = "Excelente";
+        else if (kda >= 2.0) rendimiento = "Muy Bueno";
+        else if (kda >= 1.5) rendimiento = "Bueno";
+        else if (kda >= 1.0) rendimiento = "Regular";
+        else rendimiento = "Necesita Mejorar";
+        
+        mensajeEmail.append("└─ Rendimiento: ").append(rendimiento).append("\n\n");
+
+        mensajeEmail.append("🏆 MVP: ").append(mvp.getUsuario().getUsername());
+        mensajeEmail.append(" (KDA: ").append(String.format("%.2f", mvp.getKda())).append(")\n\n");
+
+        mensajeEmail.append("📈 MARCADOR FINAL:\n");
+        mensajeEmail.append("├─ Equipo Azul: ").append(killsEquipo1).append(" kills\n");
+        mensajeEmail.append("└─ Equipo Rojo: ").append(killsEquipo2).append(" kills\n");
+
+        // Crear y enviar notificación por email
+        models.Notificacion notificacion = new models.Notificacion(
+            models.Notificacion.TipoNotificacion.FINALIZADO,
+            mensajeEmail.toString(),
+            usuarioReal
+        );
+        
+        // Enviar email
+        notifiers.EmailNotifier emailNotifier = new notifiers.EmailNotifier();
+        emailNotifier.sendNotification(notificacion);
+
+        consoleView.mostrarExito("\n📧 Email enviado con tus estadísticas finales a: " + usuarioReal.getEmail());
     }
 
     // ============================================

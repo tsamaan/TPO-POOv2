@@ -115,6 +115,7 @@ public class MatchmakingController {
     /**
      * Busca jugadores usando estrategia MMR
      * ACTUALIZADO: Usa el número correcto de jugadores según el formato
+     * NUEVO: Garantiza 1 de cada rol por equipo en LoL (5v5)
      */
     private List<Usuario> buscarJugadoresConMMR(Usuario usuarioActual, Scrim scrim,
                                                 String juego, String rolUsuario) {
@@ -131,6 +132,13 @@ public class MatchmakingController {
 
         int rangoUsuario = usuarioActual.getRangoPorJuego().get(juego);
 
+        // Para LoL/Valorant 5v5: necesitamos asignar roles únicos por equipo
+        List<String> rolesEquipo1 = new ArrayList<>();
+        List<String> rolesEquipo2 = new ArrayList<>();
+        
+        // Agregar el rol del usuario al primer equipo
+        rolesEquipo1.add(rolUsuario);
+
         for (int i = 0; i < jugadoresFaltantes; i++) {
             int rangoBot = rangoUsuario + random.nextInt(300) - 150;
             rangoBot = Math.max(scrim.getRangoMin(), Math.min(scrim.getRangoMax(), rangoBot));
@@ -139,7 +147,28 @@ public class MatchmakingController {
                                      "bot" + (i+1) + "@escrims.com");
             bot.getRangoPorJuego().put(juego, rangoBot);
 
-            String rolBot = rolesDisponibles[random.nextInt(rolesDisponibles.length)];
+            // Asignar rol según el juego y formato
+            String rolBot;
+            if (esJuegoConRolesUnicos(juego)) {
+                // Para LoL/Valorant: asignar roles únicos por equipo
+                int jugadoresEnEquipo1 = rolesEquipo1.size();
+                int jugadoresEnEquipo2 = rolesEquipo2.size();
+                int jugadoresPorEquipo = jugadoresTotales / 2;
+
+                if (jugadoresEnEquipo1 < jugadoresPorEquipo) {
+                    // Asignar al equipo 1
+                    rolBot = obtenerRolDisponible(rolesDisponibles, rolesEquipo1);
+                    rolesEquipo1.add(rolBot);
+                } else {
+                    // Asignar al equipo 2
+                    rolBot = obtenerRolDisponible(rolesDisponibles, rolesEquipo2);
+                    rolesEquipo2.add(rolBot);
+                }
+            } else {
+                // Para otros juegos: rol aleatorio
+                rolBot = rolesDisponibles[random.nextInt(rolesDisponibles.length)];
+            }
+            
             bot.setRol(rolBot);
 
             ScrimContext tempContext = new ScrimContext(scrim, scrim.getEstado());
@@ -151,6 +180,28 @@ public class MatchmakingController {
         }
 
         return jugadores;
+    }
+
+    /**
+     * Verifica si el juego requiere roles únicos por equipo
+     */
+    private boolean esJuegoConRolesUnicos(String juego) {
+        String juegoLower = juego.toLowerCase();
+        return juegoLower.contains("league") || juegoLower.contains("lol") || 
+               juegoLower.contains("valorant");
+    }
+
+    /**
+     * Obtiene un rol disponible que no esté ya asignado en el equipo
+     */
+    private String obtenerRolDisponible(String[] rolesDisponibles, List<String> rolesYaAsignados) {
+        for (String rol : rolesDisponibles) {
+            if (!rolesYaAsignados.contains(rol)) {
+                return rol;
+            }
+        }
+        // Si todos los roles están asignados, devolver el primero (fallback)
+        return rolesDisponibles[0];
     }
 
     // ============================================
@@ -177,8 +228,8 @@ public class MatchmakingController {
         consoleView.mostrarSubtitulo("FORMANDO EQUIPOS");
         consoleView.mostrarEquipos(equipoAzul, equipoRojo, rolesAsignados, jugadores, usuarioActual);
 
-        // Transiciones de estado
-        ejecutarTransicionesEstado(scrim, context);
+        // Transiciones de estado (pasando usuario actual para confirmaciones)
+        ejecutarTransicionesEstado(scrim, context, usuarioActual, jugadores);
 
         // Generar y mostrar estadísticas
         mostrarEstadisticasFinales(jugadores, scrim, equipoAzul, equipoRojo);
@@ -221,8 +272,10 @@ public class MatchmakingController {
     /**
      * Ejecuta las transiciones de estado de la partida
      * NUEVA LÓGICA: Confirmación manual con sistema de sanciones
+     * NUEVO: Envía email con estadísticas al finalizar
      */
-    private void ejecutarTransicionesEstado(Scrim scrim, ScrimContext context) {
+    private void ejecutarTransicionesEstado(Scrim scrim, ScrimContext context, 
+                                           Usuario usuarioReal, List<Usuario> todosJugadores) {
         consoleView.mostrarSubtitulo("INICIANDO PARTIDA...");
 
         // Transición: Buscando → LobbyCompleto
@@ -230,18 +283,18 @@ public class MatchmakingController {
         context.cambiarEstado(new EstadoLobbyCompleto());
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
 
-        // NUEVA FASE: Confirmación Manual de Jugadores
+        // NUEVA FASE: Confirmación Manual (solo usuario real)
         consoleView.delay(1000);
-        boolean todosConfirmaron = procesarConfirmacionesJugadores(scrim);
+        boolean todosConfirmaron = procesarConfirmacionesJugadores(scrim, usuarioReal);
         
         if (!todosConfirmaron) {
-            // Algún jugador rechazó o no confirmó a tiempo
-            consoleView.mostrarError("❌ Partida cancelada - No todos los jugadores confirmaron");
+            // Usuario rechazó o está baneado
+            consoleView.mostrarError("❌ Partida cancelada");
             context.cancelar();
             return;
         }
 
-        // Transición: LobbyCompleto → Confirmado (solo si todos confirmaron)
+        // Transición: LobbyCompleto → Confirmado (solo si confirmó)
         consoleView.delay(1000);
         context.cambiarEstado(new EstadoConfirmado());
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
@@ -258,6 +311,9 @@ public class MatchmakingController {
         context.cambiarEstado(new EstadoFinalizado());
         gameView.mostrarFinPartida();
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
+        
+        // NUEVO: Enviar email con estadísticas finales
+        enviarEmailEstadisticasFinales(scrim, usuarioReal, todosJugadores);
     }
 
     // ============================================
@@ -266,16 +322,16 @@ public class MatchmakingController {
 
     /**
      * Procesa las confirmaciones manuales de todos los jugadores
-     * Si alguien rechaza, es sancionado y los demás vuelven a la cola
+     * NUEVO: Solo pregunta al usuario real, los bots confirman automáticamente
+     * Si el usuario rechaza, es sancionado
      * 
-     * @return true si todos confirmaron, false si alguien rechazó
+     * @return true si todos confirmaron, false si usuario rechazó
      */
-    private boolean procesarConfirmacionesJugadores(Scrim scrim) {
+    private boolean procesarConfirmacionesJugadores(Scrim scrim, Usuario usuarioReal) {
         consoleView.mostrarSubtitulo("⏰ FASE DE CONFIRMACIÓN");
-        consoleView.mostrarInfo("Todos los jugadores deben confirmar su participación");
+        consoleView.mostrarInfo("Debes confirmar tu participación en la partida");
         
         List<models.Postulacion> postulaciones = scrim.getPostulaciones();
-        List<Usuario> jugadoresQueRechazan = new ArrayList<>();
         
         int confirmados = 0;
         int total = postulaciones.size();
@@ -290,43 +346,137 @@ public class MatchmakingController {
                 long minutosRestantes = jugador.getMinutosRestantesBan();
                 consoleView.mostrarError("❌ " + jugador.getUsername() + 
                     " está baneado (quedan " + minutosRestantes + " minutos)");
-                jugadoresQueRechazan.add(jugador);
-                continue;
+                
+                // Aplicar sanción al usuario real y cancelar
+                if (jugador.getId() == usuarioReal.getId()) {
+                    consoleView.mostrarError("⚠️ No puedes jugar mientras estés baneado");
+                }
+                return false;
             }
             
-            // Solicitar confirmación
-            boolean confirma = consoleView.solicitarConfirmacion(
-                "¿" + jugador.getUsername() + " confirma participación? (s/n): "
-            );
+            // NUEVO: Solo preguntar al usuario real
+            boolean confirma;
+            if (jugador.getId() == usuarioReal.getId()) {
+                // Usuario real - solicitar confirmación manual
+                confirma = consoleView.solicitarConfirmacion(
+                    "¿Confirmas tu participación? (s/n): "
+                );
+                
+                if (!confirma) {
+                    // Usuario rechazó - aplicar sanción
+                    consoleView.mostrarError("❌ Has rechazado la partida");
+                    usuarioReal.agregarSancion();
+                    
+                    System.out.println("\n⚠️ SANCIÓN APLICADA:");
+                    consoleView.mostrarError("🚫 Sancionado (" + usuarioReal.getSancionesActivas() + " sanciones totales)");
+                    consoleView.mostrarInfo("   Ban de " + usuarioReal.getMinutosRestantesBan() + " minutos");
+                    System.out.println("\n💡 Los demás jugadores vuelven a la cola de matchmaking");
+                    return false;
+                }
+            } else {
+                // Bot - confirma automáticamente
+                confirma = true;
+                consoleView.delay(200); // Pequeña pausa para simular
+            }
             
             if (confirma) {
                 confirmados++;
                 consoleView.mostrarExito("✅ " + jugador.getUsername() + " confirmó (" + confirmados + "/" + total + ")");
-            } else {
-                consoleView.mostrarError("❌ " + jugador.getUsername() + " rechazó la partida");
-                jugadoresQueRechazan.add(jugador);
             }
-        }
-        
-        // Si alguien rechazó, aplicar sanciones
-        if (!jugadoresQueRechazan.isEmpty()) {
-            System.out.println("\n⚠️ APLICANDO SANCIONES:");
-            for (Usuario jugador : jugadoresQueRechazan) {
-                if (!jugador.estaBaneado()) { // No sancionar dos veces
-                    jugador.agregarSancion();
-                    consoleView.mostrarError("🚫 " + jugador.getUsername() + 
-                        " sancionado (" + jugador.getSancionesActivas() + " sanciones totales)");
-                    consoleView.mostrarInfo("   Ban de " + jugador.getMinutosRestantesBan() + " minutos");
-                }
-            }
-            
-            System.out.println("\n💡 Los demás jugadores vuelven a la cola de matchmaking");
-            return false;
         }
         
         // Todos confirmaron
         consoleView.mostrarExito("\n✅ ¡TODOS LOS JUGADORES CONFIRMARON! (" + confirmados + "/" + total + ")");
         return true;
+    }
+
+    /**
+     * Envía email al usuario con estadísticas finales de la partida
+     */
+    private void enviarEmailEstadisticasFinales(Scrim scrim, Usuario usuarioReal, List<Usuario> todosJugadores) {
+        Random random = new Random();
+        
+        // Generar estadísticas para todos los jugadores
+        List<Estadistica> estadisticas = new ArrayList<>();
+        for (Usuario jugador : todosJugadores) {
+            int kills = 5 + random.nextInt(18);
+            int deaths = 8 + random.nextInt(12);
+            int assists = 3 + random.nextInt(15);
+            Estadistica stat = new Estadistica(jugador, scrim, kills, deaths, assists);
+            estadisticas.add(stat);
+        }
+        
+        // Encontrar estadística del usuario real
+        Estadistica statUsuario = null;
+        for (int i = 0; i < todosJugadores.size(); i++) {
+            if (todosJugadores.get(i).getId() == usuarioReal.getId()) {
+                statUsuario = estadisticas.get(i);
+                break;
+            }
+        }
+        
+        if (statUsuario == null) return;
+        
+        // Encontrar MVP
+        Estadistica mvpStat = estadisticas.stream()
+            .max((a, b) -> Double.compare(a.getKda(), b.getKda()))
+            .orElse(estadisticas.get(0));
+        
+        // Calcular resultado (equipos divididos por mitad)
+        int mitad = todosJugadores.size() / 2;
+        int killsEquipo1 = 0;
+        int killsEquipo2 = 0;
+        
+        for (int i = 0; i < estadisticas.size(); i++) {
+            if (i < mitad) {
+                killsEquipo1 += estadisticas.get(i).getKills();
+            } else {
+                killsEquipo2 += estadisticas.get(i).getKills();
+            }
+        }
+        
+        boolean usuarioGano = (todosJugadores.indexOf(usuarioReal) < mitad) ? 
+                              (killsEquipo1 > killsEquipo2) : (killsEquipo2 > killsEquipo1);
+        String resultado = usuarioGano ? "VICTORIA" : "DERROTA";
+        
+        // Construir mensaje del email
+        StringBuilder mensaje = new StringBuilder();
+        mensaje.append("¡Tu partida de ").append(scrim.getJuego()).append(" ha finalizado!\n\n");
+        mensaje.append("═══════════════════════════════════════════\n");
+        mensaje.append("📊 RESULTADO: ").append(resultado).append("\n");
+        mensaje.append("═══════════════════════════════════════════\n\n");
+        
+        mensaje.append("🎯 TUS ESTADÍSTICAS:\n");
+        mensaje.append("├─ Kills: ").append(statUsuario.getKills()).append("\n");
+        mensaje.append("├─ Deaths: ").append(statUsuario.getDeaths()).append("\n");
+        mensaje.append("├─ Assists: ").append(statUsuario.getAssists()).append("\n");
+        mensaje.append("├─ KDA: ").append(String.format("%.2f", statUsuario.getKda())).append("\n");
+        mensaje.append("└─ Rendimiento: ").append(statUsuario.obtenerRendimiento()).append("\n\n");
+        
+        mensaje.append("🏆 MVP DE LA PARTIDA:\n");
+        mensaje.append("└─ ").append(mvpStat.getUsuario().getUsername());
+        mensaje.append(" (KDA: ").append(String.format("%.2f", mvpStat.getKda())).append(")\n\n");
+        
+        mensaje.append("📈 MARCADOR FINAL:\n");
+        mensaje.append("├─ Equipo Azul: ").append(killsEquipo1).append(" kills\n");
+        mensaje.append("└─ Equipo Rojo: ").append(killsEquipo2).append(" kills\n\n");
+        
+        mensaje.append("═══════════════════════════════════════════\n");
+        mensaje.append("Gracias por jugar en eScrims!\n");
+        mensaje.append("¡Nos vemos en la próxima partida! 🎮");
+        
+        // Crear y enviar notificación por email
+        models.Notificacion notificacion = new models.Notificacion(
+            models.Notificacion.TipoNotificacion.FINALIZADO,
+            mensaje.toString(),
+            usuarioReal
+        );
+        
+        // Enviar email
+        notifiers.EmailNotifier emailNotifier = new notifiers.EmailNotifier();
+        emailNotifier.sendNotification(notificacion);
+        
+        consoleView.mostrarExito("\n📧 Email enviado con tus estadísticas finales a: " + usuarioReal.getEmail());
     }
 
     // ============================================

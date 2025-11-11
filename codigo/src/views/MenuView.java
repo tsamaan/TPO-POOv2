@@ -43,9 +43,10 @@ public class MenuView {
         System.out.println("[2] Buscar Salas Disponibles");
         System.out.println("[3] Ver Mi Perfil");
         System.out.println("[4] Editar Perfil");
-        System.out.println("[5] Salir");
+        System.out.println("[5] Cerrar Sesión");
+        System.out.println("[6] Salir");
 
-        return consoleView.solicitarNumero("Selecciona una opción", 1, 5);
+        return consoleView.solicitarNumero("Selecciona una opción", 1, 6);
     }
 
     // ============================================

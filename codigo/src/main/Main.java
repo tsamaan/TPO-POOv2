@@ -49,50 +49,64 @@ public class Main {
         // Mostrar header
         consoleView.mostrarHeader();
 
-        // Menú inicial: Login / Registro
-        Usuario usuarioActual = menuInicialAuth(userController, authView, consoleView);
+        // Main loop - Aplicación completa con autenticación
+        boolean appRunning = true;
+        
+        while (appRunning) {
+            // Menú inicial: Login / Registro
+            Usuario usuarioActual = menuInicialAuth(userController, authView, consoleView);
 
-        if (usuarioActual == null) {
-            consoleView.mostrarInfo("Saliendo de eScrims...");
-            consoleView.cerrarScanner();
-            return;
-        }
+            if (usuarioActual == null) {
+                // Usuario eligió "Salir" en el menú inicial
+                consoleView.mostrarInfo("Saliendo de eScrims...");
+                appRunning = false;
+                continue;
+            }
 
-        // Main loop - Dashboard
-        boolean running = true;
-        while (running) {
-            int opcion = menuView.mostrarMenuPrincipal(usuarioActual);
+            // Dashboard - Loop interno para usuario autenticado
+            boolean sesionActiva = true;
+            while (sesionActiva) {
+                int opcion = menuView.mostrarMenuPrincipal(usuarioActual);
 
-            switch (opcion) {
-                case 1:
-                    // Juego Rápido (Matchmaking automático)
-                    matchmakingController.juegoRapido(usuarioActual, userController);
-                    break;
+                switch (opcion) {
+                    case 1:
+                        // Juego Rápido (Matchmaking automático)
+                        matchmakingController.juegoRapido(usuarioActual, userController);
+                        break;
 
-                case 2:
-                    // Buscar Salas Disponibles
-                    scrimController.buscarSalasDisponibles(usuarioActual, userController);
-                    break;
+                    case 2:
+                        // Buscar Salas Disponibles
+                        scrimController.buscarSalasDisponibles(usuarioActual, userController);
+                        break;
 
-                case 3:
-                    // Ver Mi Perfil
-                    userController.verPerfil(usuarioActual);
-                    break;
+                    case 3:
+                        // Ver Mi Perfil
+                        userController.verPerfil(usuarioActual);
+                        break;
 
-                case 4:
-                    // Editar Perfil
-                    userController.editarPerfil(usuarioActual);
-                    break;
+                    case 4:
+                        // Editar Perfil
+                        userController.editarPerfil(usuarioActual);
+                        break;
 
-                case 5:
-                    // Salir
-                    menuView.mostrarDespedida(usuarioActual.getUsername());
-                    running = false;
-                    break;
+                    case 5:
+                        // Cerrar Sesión
+                        consoleView.mostrarInfo("\n[!] Cerrando sesión de " + usuarioActual.getUsername() + "...");
+                        consoleView.mostrarInfo("[+] Sesión cerrada exitosamente.\n");
+                        sesionActiva = false; // Volver al menú de login/registro
+                        break;
 
-                default:
-                    consoleView.mostrarError("Opción inválida. Intenta nuevamente.");
-                    break;
+                    case 6:
+                        // Salir de la aplicación
+                        menuView.mostrarDespedida(usuarioActual.getUsername());
+                        sesionActiva = false;
+                        appRunning = false;
+                        break;
+
+                    default:
+                        consoleView.mostrarError("Opción inválida. Intenta nuevamente.");
+                        break;
+                }
             }
         }
 

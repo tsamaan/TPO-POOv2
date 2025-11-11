@@ -427,36 +427,39 @@ public class MatchmakingController {
      * Envía email de cancelación solo al usuario que rechazó la partida
      */
     private void enviarEmailCancelacion(Usuario usuario, Scrim scrim) {
+
+        
         try {
-            String asunto = "[eScrims] Has rechazado la partida - Sanción aplicada";
+            String asunto = "[eScrims] Has rechazado la partida - Sancion aplicada";
             
-            String mensaje = String.format(
-                "Has rechazado la confirmación de la partida.\n\n" +
-                "SANCIÓN APLICADA:\n" +
-                "- Sanciones totales: %d\n" +
-                "- Tiempo de ban: %d minutos\n" +
-                "- No podrás unirte a partidas hasta que expire el ban\n\n" +
-                "Los demás jugadores han vuelto a la cola de matchmaking.\n\n" +
-                "Detalles de la partida cancelada:\n" +
-                "- Juego: %s\n" +
-                "- Formato: %s\n" +
-                "- Modalidad: %s\n\n" +
-                "¡Espera a que expire tu ban para volver a jugar!",
-                usuario.getSancionesActivas(),
-                usuario.getMinutosRestantesBan(),
-                scrim.getJuego(),
-                scrim.getFormato(),
-                scrim.getModalidad()
-            );
+            // Construir mensaje SIN caracteres especiales problemáticos
+            StringBuilder mensajeBuilder = new StringBuilder();
+            mensajeBuilder.append("Has rechazado la confirmacion de la partida.\\n\\n");
+            mensajeBuilder.append("SANCION APLICADA:\\n");
+            mensajeBuilder.append("- Sanciones totales: ").append(usuario.getSancionesActivas()).append("\\n");
+            mensajeBuilder.append("- Tiempo de ban: ").append(usuario.getMinutosRestantesBan()).append(" minutos\\n");
+            mensajeBuilder.append("- No podras unirte a partidas hasta que expire el ban\\n\\n");
+            mensajeBuilder.append("Los demas jugadores han vuelto a la cola de matchmaking.\\n\\n");
+            mensajeBuilder.append("Detalles de la partida cancelada:\\n");
+            mensajeBuilder.append("- Juego: ").append(scrim.getJuego()).append("\\n");
+            mensajeBuilder.append("- Formato: ").append(scrim.getFormato()).append("\\n");
+            mensajeBuilder.append("- Modalidad: ").append(scrim.getModalidad()).append("\\n\\n");
+            mensajeBuilder.append("Espera a que expire tu ban para volver a jugar!");
+            String mensaje = mensajeBuilder.toString();
             
             // Enviar email usando la API
             String url = "https://send-email-zeta.vercel.app/send-email";
+            
+            // USAR EL MISMO FORMATO QUE EmailNotifier (que funciona correctamente)
             String jsonBody = String.format(
-                "{\"to\":\"%s\",\"subject\":\"%s\",\"text\":\"%s\"}",
+                "{\"name\":\"%s\",\"email\":\"%s\",\"subject\":\"%s\",\"message\":\"%s\"}",
+                escapeJson(usuario.getUsername()),
                 usuario.getEmail(),
-                asunto,
-                mensaje.replace("\n", "\\n").replace("\"", "\\\"")
+                escapeJson(asunto),
+                escapeJson(mensaje)
             );
+            
+
             
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
@@ -466,17 +469,39 @@ public class MatchmakingController {
                 .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
             
-            client.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString())
-                .thenApply(java.net.http.HttpResponse::statusCode)
-                .thenAccept(statusCode -> {
-                    if (statusCode == 200) {
-                        System.out.println("📧 Email de cancelación enviado a " + usuario.getEmail());
-                    }
-                });
+            // ENVÍO SÍNCRONO para asegurar que se complete antes de continuar
+            java.net.http.HttpResponse<String> response = client.send(
+                request, 
+                java.net.http.HttpResponse.BodyHandlers.ofString()
+            );
+
+            
+            if (response.statusCode() == 200) {
+                System.out.println(" Email de cancelación enviado a " + usuario.getEmail());
+            } else {
+                System.err.println(" Error al enviar email. Status: " + response.statusCode());
+                System.err.println(" Respuesta del servidor: " + response.body());
+            }
                 
         } catch (Exception e) {
-            System.err.println("Error enviando email de cancelación: " + e.getMessage());
+            System.err.println(" Error enviando email de cancelación: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Escapa caracteres especiales para JSON
+     */
+    private String escapeJson(String text) {
+        if (text == null) {
+            return "";
+        }
+        
+        return text
+            .replace("\\", "\\\\")  // \ -> \\
+            .replace("\"", "\\\"")  // " -> \"
+            .replace("\n", "\\n")   // newline -> \n
+            .replace("\r", "\\r")   // carriage return -> \r
+            .replace("\t", "\\t");  // tab -> \t
     }
 
     /**

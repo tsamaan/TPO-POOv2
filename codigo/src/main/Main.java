@@ -11,6 +11,7 @@ import interfaces.INotifier;
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public class Main {
@@ -30,8 +31,16 @@ public class Main {
         "FrostBite", "VenomStrike", "GhostRecon", "ZenMaster"
     };
     
+    // Roles específicos por juego (real-world roles)
+    private static final Map<String, String[]> ROLES_POR_JUEGO = Map.of(
+        "Valorant", new String[]{"Duelist", "Controller", "Initiator", "Sentinel"},
+        "League of Legends", new String[]{"Top", "Jungle", "Mid", "ADC", "Support"},
+        "CS:GO", new String[]{"Entry Fragger", "AWPer", "Support", "Lurker", "IGL"}
+    );
+    
+    // Roles por defecto (para compatibilidad)
     private static final String[] ROLES = {
-        "Top", "Support", "ADC", "Jungla", "Mid"
+        "Top", "Support", "ADC", "Jungle", "Mid"
     };
     
     public static void main(String[] args) {
@@ -44,7 +53,9 @@ public class Main {
     }
     
     /**
-     * Imprime el encabezado principal de la aplicacion
+     * Imprime el encabezado principal de la aplicaciondos opciones de juego:
+1) juego rápido: usa las caractiristicas preferidas del usuario (tipo de juego y empareja por rango)
+2) buscar salas: te pregunta de qque juego queres buscar sala, te salen todas las salas y el rango permitido, si intentas entrar a una sala donde, por rango, no tenes permitido debe rechazarte.
      */
     private static void printHeader() {
         System.out.println("\n" + SEPARATOR);
@@ -73,12 +84,15 @@ public class Main {
             
             switch (opcion) {
                 case "1":
-                    buscarPartida(usuarioActual);
+                    juegoRapido(usuarioActual);
                     break;
                 case "2":
-                    ejecutarDemoCompleta();
+                    buscarSalasDisponibles(usuarioActual);
                     break;
                 case "3":
+                    ejecutarDemoCompleta();
+                    break;
+                case "4":
                     System.out.println("\n[!] Saliendo de eScrims...");
                     System.out.println("[+] ¡Hasta pronto, " + usuarioActual.getUsername() + "!");
                     enJuego = false;
@@ -150,15 +164,376 @@ public class Main {
         System.out.println("\n" + LINE);
         System.out.println("[!] MENU PRINCIPAL - " + usuario.getUsername());
         System.out.println(LINE);
-        System.out.println("\n[1] Buscar Partida (Scrim)");
-        System.out.println("[2] Ver Demo Completa de Patrones");
-        System.out.println("[3] Salir");
+        System.out.println("\n[1] Juego Rápido (Matchmaking automático)");
+        System.out.println("[2] Buscar Salas Disponibles");
+        System.out.println("[3] Ver Demo Completa de Patrones");
+        System.out.println("[4] Salir");
         System.out.print("\n[>] Selecciona una opción: ");
     }
     
     /**
-     * Sistema de búsqueda de partida con matchmaking
+     * Modo 2: Buscar Salas Disponibles - Navegación manual por salas con validación de rango
      */
+    private static void buscarSalasDisponibles(Usuario usuarioActual) {
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("[!] BUSCAR SALAS DISPONIBLES");
+        System.out.println(SEPARATOR + "\n");
+        
+        SalaManager salaManager = SalaManager.getInstance();
+        
+        // Mostrar juegos disponibles
+        List<String> juegosDisponibles = salaManager.getJuegosDisponibles();
+        System.out.println("[?] Selecciona un juego:");
+        for (int i = 0; i < juegosDisponibles.size(); i++) {
+            System.out.println("  [" + (i + 1) + "] " + juegosDisponibles.get(i));
+        }
+        System.out.print("\n[>] Selecciona tu opción: ");
+        
+        String opcion = scanner.nextLine().trim();
+        int indice = -1;
+        try {
+            indice = Integer.parseInt(opcion) - 1;
+        } catch (NumberFormatException e) {
+            System.out.println("[!] Opción inválida.");
+            return;
+        }
+        
+        if (indice < 0 || indice >= juegosDisponibles.size()) {
+            System.out.println("[!] Opción fuera de rango.");
+            return;
+        }
+        
+        String juegoSeleccionado = juegosDisponibles.get(indice);
+        
+        // Verificar o configurar rango del usuario para ese juego
+        Map<String, Integer> rangos = usuarioActual.getRangoPorJuego();
+        if (!rangos.containsKey(juegoSeleccionado)) {
+            System.out.println("\n[!] No tienes rango configurado para " + juegoSeleccionado);
+            System.out.print("[>] Ingresa tu rango (0-3000): ");
+            try {
+                int rangoNuevo = Integer.parseInt(scanner.nextLine().trim());
+                usuarioActual.getRangoPorJuego().put(juegoSeleccionado, rangoNuevo);
+                System.out.println("[+] Rango configurado: " + rangoNuevo);
+            } catch (NumberFormatException e) {
+                System.out.println("[!] Valor inválido. Usando rango 1000 por defecto.");
+                usuarioActual.getRangoPorJuego().put(juegoSeleccionado, 1000);
+            }
+        }
+        
+        int rangoUsuario = usuarioActual.getRangoPorJuego().get(juegoSeleccionado);
+        System.out.println("\n[+] Tu rango en " + juegoSeleccionado + ": " + rangoUsuario);
+        
+        // Obtener salas del juego seleccionado
+        List<Scrim> salas = salaManager.getSalasPorJuego(juegoSeleccionado);
+        
+        if (salas.isEmpty()) {
+            System.out.println("\n[!] No hay salas disponibles para " + juegoSeleccionado);
+            return;
+        }
+        
+        // Mostrar salas disponibles
+        System.out.println("\n" + LINE);
+        System.out.println("[!] SALAS DISPONIBLES PARA " + juegoSeleccionado.toUpperCase());
+        System.out.println(LINE + "\n");
+        
+        for (int i = 0; i < salas.size(); i++) {
+            Scrim sala = salas.get(i);
+            System.out.println("[" + (i + 1) + "] Sala ID: " + sala.getId());
+            System.out.println("    Modalidad: " + sala.getModalidad());
+            System.out.println("    Rango permitido: " + sala.getRangoMin() + " - " + sala.getRangoMax());
+            System.out.println("    Latencia máxima: " + sala.getLatenciaMax() + " ms");
+            System.out.println("    Formato: " + sala.getFormato());
+            System.out.println("    Region: " + sala.getRegion());
+            
+            // Indicar si el usuario puede unirse
+            boolean puedeUnirse = salaManager.puedeUnirse(usuarioActual, sala);
+            if (puedeUnirse) {
+                System.out.println("    [✓] Puedes unirte a esta sala");
+            } else {
+                System.out.println("    [✗] Tu rango (" + rangoUsuario + ") no cumple los requisitos");
+            }
+            System.out.println();
+        }
+        
+        // Seleccionar sala
+        System.out.print("[>] Selecciona una sala para unirte (0 para cancelar): ");
+        String opcionSala = scanner.nextLine().trim();
+        
+        if (opcionSala.equals("0")) {
+            System.out.println("[!] Búsqueda cancelada.");
+            return;
+        }
+        
+        int indiceSala = -1;
+        try {
+            indiceSala = Integer.parseInt(opcionSala) - 1;
+        } catch (NumberFormatException e) {
+            System.out.println("[!] Opción inválida.");
+            return;
+        }
+        
+        if (indiceSala < 0 || indiceSala >= salas.size()) {
+            System.out.println("[!] Opción fuera de rango.");
+            return;
+        }
+        
+        Scrim salaSeleccionada = salas.get(indiceSala);
+        
+        // Validar si puede unirse
+        if (!salaManager.puedeUnirse(usuarioActual, salaSeleccionada)) {
+            System.out.println("\n" + LINE);
+            System.out.println("[✗] ACCESO DENEGADO");
+            System.out.println(LINE);
+            System.out.println("\n[!] No puedes unirte a esta sala.");
+            System.out.println("[!] Tu rango: " + rangoUsuario);
+            System.out.println("[!] Rango requerido: " + salaSeleccionada.getRangoMin() + " - " + salaSeleccionada.getRangoMax());
+            System.out.println("\n[!] Mejora tu rango o busca otra sala.");
+            return;
+        }
+        
+        // Unirse a la sala
+        System.out.println("\n" + LINE);
+        System.out.println("[✓] ACCESO CONCEDIDO");
+        System.out.println(LINE);
+        System.out.println("\n[+] ¡Te has unido a la sala #" + salaSeleccionada.getId() + "!");
+        
+        // Seleccionar rol según el juego
+        String rolSeleccionado = seleccionarRol(juegoSeleccionado);
+        
+        // Crear contexto y postular
+        ScrimContext context = new ScrimContext(salaSeleccionada, salaSeleccionada.getEstado());
+        context.postular(usuarioActual, rolSeleccionado);
+        
+        System.out.println("[+] Rol seleccionado: " + rolSeleccionado);
+        System.out.println("[+] Esperando a que se completen los cupos...");
+        
+        // Simular otros jugadores uniéndose
+        System.out.println("\n[*] Otros jugadores se están uniendo...");
+        Random random = new Random();
+        String[] nombresBot = {"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta"};
+        String[] rolesDisponibles = ROLES_POR_JUEGO.getOrDefault(juegoSeleccionado, ROLES);
+        
+        for (int i = 0; i < 7; i++) {
+            try { Thread.sleep(600); } catch (InterruptedException e) {}
+            
+            int rangoBot = salaSeleccionada.getRangoMin() + 
+                          random.nextInt(salaSeleccionada.getRangoMax() - salaSeleccionada.getRangoMin());
+            
+            Usuario bot = new Usuario(
+                i + 200,
+                nombresBot[i] + random.nextInt(100),
+                "bot" + (i+1) + "@escrims.com"
+            );
+            bot.getRangoPorJuego().put(juegoSeleccionado, rangoBot);
+            
+            String rolBot = rolesDisponibles[random.nextInt(rolesDisponibles.length)];
+            context.postular(bot, rolBot);
+            
+            System.out.println("[+] " + bot.getUsername() + " se ha unido (Rango: " + rangoBot + ")");
+        }
+        
+        System.out.println("\n[+] ¡Sala completa! Iniciando partida...");
+        
+        // Transiciones de estado
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        ScrimState lobbyCompleto = new EstadoLobbyCompleto();
+        context.cambiarEstado(lobbyCompleto);
+        System.out.println("[+] Estado: " + salaSeleccionada.getEstado().getClass().getSimpleName());
+        
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        ScrimState confirmado = new EstadoConfirmado();
+        context.cambiarEstado(confirmado);
+        System.out.println("[+] Estado: " + salaSeleccionada.getEstado().getClass().getSimpleName());
+        
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        ScrimState enJuego = new EstadoEnJuego();
+        context.cambiarEstado(enJuego);
+        System.out.println("[+] ¡Partida en curso! Estado: " + salaSeleccionada.getEstado().getClass().getSimpleName());
+        
+        System.out.println("\n[?] Presiona ENTER para finalizar la partida...");
+        scanner.nextLine();
+        
+        ScrimState finalizado = new EstadoFinalizado();
+        context.cambiarEstado(finalizado);
+        System.out.println("[+] Partida finalizada. ¡GG! Estado: " + salaSeleccionada.getEstado().getClass().getSimpleName());
+    }
+    
+    /**
+     * Modo 1: Juego Rápido - Matchmaking automático usando preferencias del usuario
+     */
+    private static void juegoRapido(Usuario usuarioActual) {
+        System.out.println("\n" + SEPARATOR);
+        System.out.println("[!] JUEGO RÁPIDO - MATCHMAKING AUTOMÁTICO");
+        System.out.println(SEPARATOR + "\n");
+        
+        // Seleccionar juego preferido
+        System.out.println("[?] ¿Qué juego quieres jugar?");
+        System.out.println("  [1] Valorant");
+        System.out.println("  [2] League of Legends");
+        System.out.println("  [3] CS:GO");
+        System.out.print("\n[>] Selecciona tu juego: ");
+        
+        String juegoSeleccionado = "";
+        String formato = "";
+        String opcionJuego = scanner.nextLine().trim();
+        
+        switch (opcionJuego) {
+            case "1":
+                juegoSeleccionado = "Valorant";
+                formato = "5v5";
+                break;
+            case "2":
+                juegoSeleccionado = "League of Legends";
+                formato = "5v5";
+                break;
+            case "3":
+                juegoSeleccionado = "CS:GO";
+                formato = "5v5";
+                break;
+            default:
+                System.out.println("[!] Opción inválida. Seleccionando Valorant por defecto.");
+                juegoSeleccionado = "Valorant";
+                formato = "5v5";
+        }
+        
+        // Verificar rango del usuario para ese juego
+        Map<String, Integer> rangos = usuarioActual.getRangoPorJuego();
+        if (!rangos.containsKey(juegoSeleccionado)) {
+            System.out.println("\n[!] No tienes rango configurado para " + juegoSeleccionado);
+            System.out.print("[>] Ingresa tu rango (0-3000): ");
+            try {
+                int rangoNuevo = Integer.parseInt(scanner.nextLine().trim());
+                usuarioActual.getRangoPorJuego().put(juegoSeleccionado, rangoNuevo);
+                System.out.println("[+] Rango configurado: " + rangoNuevo);
+            } catch (NumberFormatException e) {
+                System.out.println("[!] Valor inválido. Usando rango 1000 por defecto.");
+                usuarioActual.getRangoPorJuego().put(juegoSeleccionado, 1000);
+            }
+        }
+        
+        int rangoUsuario = usuarioActual.getRangoPorJuego().get(juegoSeleccionado);
+        
+        // Seleccionar rol según el juego
+        String rolSeleccionado = seleccionarRol(juegoSeleccionado);
+        
+        // Crear sistema de notificaciones (Patrón Abstract Factory)
+        System.out.println("\n[*] Inicializando sistema de notificaciones...");
+        NotifierFactory factory = new SimpleNotifierFactory();
+        INotifier emailNotifier = factory.createEmailNotifier();
+        INotifier discordNotifier = factory.createDiscordNotifier();
+        System.out.println("[+] Sistema de notificaciones activo");
+        
+        // Crear sala automática usando BUILDER con rango dinámico (Patrón Builder)
+        System.out.println("\n[*] Creando sala automática basada en tu rango (" + rangoUsuario + ")...");
+        ScrimState estadoInicial = new EstadoBuscandoJugadores();
+        
+        // Calcular rango aceptable (±200 puntos)
+        int rangoMin = Math.max(0, rangoUsuario - 200);
+        int rangoMax = Math.min(3000, rangoUsuario + 200);
+        
+        Scrim scrim = new Scrim.Builder(estadoInicial)
+            .juego(juegoSeleccionado)
+            .formato(formato)
+            .region("SA")
+            .modalidad("ranked")
+            .rangoMin(rangoMin)
+            .rangoMax(rangoMax)
+            .latenciaMax(80)
+            .build();
+        
+        // Agregar notificadores (Patrón Observer)
+        scrim.addNotifier(emailNotifier);
+        scrim.addNotifier(discordNotifier);
+        
+        ScrimContext context = new ScrimContext(scrim, estadoInicial);
+        System.out.println("[+] Sala creada - Estado: " + scrim.getEstado().getClass().getSimpleName());
+        System.out.println("[+] Rango permitido: " + rangoMin + " - " + rangoMax);
+        
+        // Postular al usuario actual
+        System.out.println("\n[*] Uniéndote al matchmaking...");
+        context.postular(usuarioActual, rolSeleccionado);
+        System.out.println("[+] ¡En cola de matchmaking!");
+        System.out.println("[+] Juego: " + juegoSeleccionado);
+        System.out.println("[+] Rol: " + rolSeleccionado);
+        System.out.println("[+] Tu rango: " + rangoUsuario);
+        
+        // Simular matchmaking usando Strategy (Patrón Strategy - ByMMRStrategy)
+        System.out.println("\n" + LINE);
+        System.out.println("[!] BUSCANDO JUGADORES CON RANGO SIMILAR...");
+        System.out.println(LINE + "\n");
+        
+        MatchmakingService matchmaking = new MatchmakingService(new ByMMRStrategy());
+        
+        // Simular otros 7 jugadores
+        Random random = new Random();
+        String[] nombresBot = {"Shadow", "Phoenix", "Ghost", "Ninja", "Hunter", "Viper", "Storm"};
+        String[] rolesDisponibles = ROLES_POR_JUEGO.getOrDefault(juegoSeleccionado, ROLES);
+        
+        for (int i = 0; i < 7; i++) {
+            int rangoBot = rangoUsuario + random.nextInt(300) - 150; // Rango cercano al usuario
+            rangoBot = Math.max(rangoMin, Math.min(rangoMax, rangoBot));
+            
+            Usuario bot = new Usuario(
+                i + 100,
+                nombresBot[i] + random.nextInt(100),
+                "bot" + (i+1) + "@escrims.com"
+            );
+            bot.getRangoPorJuego().put(juegoSeleccionado, rangoBot);
+            
+            String rolBot = rolesDisponibles[random.nextInt(rolesDisponibles.length)];
+            context.postular(bot, rolBot);
+            
+            System.out.println("[+] Jugador encontrado: " + bot.getUsername() + " (Rango: " + rangoBot + ")");
+            
+            try { Thread.sleep(400); } catch (InterruptedException e) {}
+        }
+        
+        // Ejecutar matchmaking con estrategia por MMR
+        System.out.println("\n[*] Aplicando algoritmo de matchmaking por MMR...");
+        matchmaking.ejecutarEmparejamiento(scrim);
+        
+        System.out.println("\n[+] ¡MATCH ENCONTRADO!");
+        System.out.println("[+] Jugadores emparejados: 8");
+        
+        // Transición de estados (simulación simplificada)
+        System.out.println("\n" + LINE);
+        System.out.println("[!] INICIANDO PARTIDA...");
+        System.out.println(LINE + "\n");
+        
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        
+        // Transición: Buscando -> LobbyCompleto
+        ScrimState lobbyCompleto = new EstadoLobbyCompleto();
+        context.cambiarEstado(lobbyCompleto);
+        System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        
+        // Transición: LobbyCompleto -> Confirmado
+        ScrimState confirmado = new EstadoConfirmado();
+        context.cambiarEstado(confirmado);
+        System.out.println("[+] Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        
+        // Transición: Confirmado -> EnJuego
+        ScrimState enJuego = new EstadoEnJuego();
+        context.cambiarEstado(enJuego);
+        System.out.println("[+] ¡Partida en curso! Estado: " + scrim.getEstado().getClass().getSimpleName());
+        
+        System.out.println("\n[?] Presiona ENTER para finalizar la partida...");
+        scanner.nextLine();
+        
+        // Transición: EnJuego -> Finalizado
+        ScrimState finalizado = new EstadoFinalizado();
+        context.cambiarEstado(finalizado);
+        System.out.println("[+] Partida finalizada. ¡GG! Estado: " + scrim.getEstado().getClass().getSimpleName());
+    }
+    
+    /**
+     * Sistema de búsqueda de partida con matchmaking (método legacy - usado en demos)
+     */
+    @SuppressWarnings("unused")
     private static void buscarPartida(Usuario usuarioActual) {
         System.out.println("\n" + SEPARATOR);
         System.out.println("[!] BUSCANDO PARTIDA...");
@@ -328,29 +703,38 @@ public class Main {
     }
     
     /**
-     * Permite al usuario seleccionar su rol
+     * Permite al usuario seleccionar su rol (sobrecargado - sin juego especificado)
      */
     private static String seleccionarRol() {
-        System.out.println("\n[!] Selecciona tu rol preferido:");
+        return seleccionarRol("League of Legends"); // Por defecto LoL
+    }
+    
+    /**
+     * Permite al usuario seleccionar su rol según el juego
+     */
+    private static String seleccionarRol(String juego) {
+        String[] rolesDisponibles = ROLES_POR_JUEGO.getOrDefault(juego, ROLES);
+        
+        System.out.println("\n[!] Selecciona tu rol preferido (" + juego + "):");
         System.out.println();
-        for (int i = 0; i < ROLES.length; i++) {
-            System.out.println("[" + (i + 1) + "] " + ROLES[i]);
+        for (int i = 0; i < rolesDisponibles.length; i++) {
+            System.out.println("[" + (i + 1) + "] " + rolesDisponibles[i]);
         }
         System.out.print("\n[>] Ingresa el número de tu rol: ");
         
         int seleccion = -1;
         try {
             seleccion = Integer.parseInt(scanner.nextLine().trim());
-            if (seleccion >= 1 && seleccion <= ROLES.length) {
-                return ROLES[seleccion - 1];
+            if (seleccion >= 1 && seleccion <= rolesDisponibles.length) {
+                return rolesDisponibles[seleccion - 1];
             }
         } catch (NumberFormatException e) {
             // Continuar con rol por defecto
         }
         
         // Rol por defecto si la selección es inválida
-        System.out.println("[!] Selección inválida, asignando rol: " + ROLES[0]);
-        return ROLES[0];
+        System.out.println("[!] Selección inválida, asignando rol: " + rolesDisponibles[0]);
+        return rolesDisponibles[0];
     }
     
     /**

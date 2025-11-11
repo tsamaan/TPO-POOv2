@@ -10,8 +10,8 @@ import java.util.List;
  * Permite agrupar múltiples notificadores y tratarlos como uno solo
  * 
  * Ejemplo de uso:
- * - AllChannels: Email + Discord + Push
- * - CriticalOnly: Discord + Push (sin email)
+ * - AllChannels: Email + Push
+ * - CriticalOnly: Solo Push
  * - DevMode: Solo consola
  */
 public class NotificationGroup implements INotificationComponent {

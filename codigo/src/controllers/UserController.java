@@ -77,9 +77,8 @@ public class UserController {
             // Mostrar éxito
             authView.mostrarRegistroExitoso(nuevoUsuario.getUsername());
 
-            // Proceso de verificación de email
-            userService.enviarEmailVerificacion(nuevoUsuario);
-            authView.mostrarVerificacionEmail(nuevoUsuario.getEmail(), true);
+            // Auto-verificar email (sin mostrar mensajes)
+            userService.verificarEmail(nuevoUsuario);
 
             // Configuración inicial del perfil
             configurarPerfilInicial(nuevoUsuario);

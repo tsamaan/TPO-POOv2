@@ -92,6 +92,19 @@ public class Scrim {
             n.sendNotification(notificacion);
         }
     }
+    
+    /**
+     * Notifica a todos los jugadores del scrim
+     */
+    public void notificarATodos(Notificacion.TipoNotificacion tipo, String mensaje) {
+        for (Postulacion postulacion : postulaciones) {
+            Usuario jugador = postulacion.getUsuario();
+            if (jugador != null) {
+                Notificacion notificacion = new Notificacion(tipo, mensaje, jugador);
+                notificarCambio(notificacion);
+            }
+        }
+    }
 
     // === Getters de Configuración ===
     

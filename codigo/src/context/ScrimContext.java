@@ -28,6 +28,10 @@ public class ScrimContext {
     public void notificarCambio(models.Notificacion notificacion) {
         scrim.notificarCambio(notificacion);
     }
+    
+    public void cancelar() {
+        estado.cancelar(scrim);
+    }
 
     public ScrimState getEstado() {
         return estado;

@@ -46,6 +46,12 @@ public class Usuario {
     // ============================================
     private String rol;                         // Rol asignado temporalmente en scrim actual
     private List<Notificacion> notificaciones;  // Notificaciones recibidas
+    
+    // ============================================
+    // SISTEMA DE SANCIONES (RF4)
+    // ============================================
+    private int sancionesActivas;               // Número de sanciones activas
+    private java.time.LocalDateTime banHasta;   // Fecha hasta la cual está baneado (null si no está baneado)
 
     // ============================================
     // CONSTRUCTORES
@@ -72,6 +78,10 @@ public class Usuario {
         this.rol = null;
         this.region = "SA"; // Default South America
         this.disponibilidadHoraria = "18:00-23:00 UTC-3"; // Default
+        
+        // Sistema de sanciones
+        this.sancionesActivas = 0;
+        this.banHasta = null;
     }
 
     /**
@@ -173,6 +183,83 @@ public class Usuario {
         if (!rolesPreferidos.contains(rol)) {
             rolesPreferidos.add(rol);
         }
+    }
+
+    // ============================================
+    // SISTEMA DE SANCIONES
+    // ============================================
+
+    /**
+     * Agrega una sanción al usuario por rechazar una confirmación
+     */
+    public void agregarSancion() {
+        this.sancionesActivas++;
+        
+        // Calcular tiempo de ban según número de sanciones
+        int minutosBan = calcularTiempoBan();
+        this.banHasta = java.time.LocalDateTime.now().plusMinutes(minutosBan);
+        
+        System.out.println("⚠️ Usuario " + username + " sancionado. Sanciones totales: " + sancionesActivas);
+        System.out.println("   Baneado hasta: " + banHasta);
+    }
+
+    /**
+     * Calcula el tiempo de ban en minutos según el número de sanciones
+     * Escalado progresivo: 5min, 15min, 30min, 60min, etc.
+     */
+    private int calcularTiempoBan() {
+        switch (sancionesActivas) {
+            case 1: return 5;   // Primera sanción: 5 minutos
+            case 2: return 15;  // Segunda: 15 minutos
+            case 3: return 30;  // Tercera: 30 minutos
+            case 4: return 60;  // Cuarta: 1 hora
+            default: return 120; // 5+ sanciones: 2 horas
+        }
+    }
+
+    /**
+     * Verifica si el usuario está actualmente baneado
+     */
+    public boolean estaBaneado() {
+        if (banHasta == null) return false;
+        
+        boolean baneado = java.time.LocalDateTime.now().isBefore(banHasta);
+        
+        // Si el ban expiró, limpiar
+        if (!baneado) {
+            banHasta = null;
+        }
+        
+        return baneado;
+    }
+
+    /**
+     * Obtiene el tiempo restante del ban en minutos
+     */
+    public long getMinutosRestantesBan() {
+        if (banHasta == null || !estaBaneado()) return 0;
+        
+        return java.time.Duration.between(
+            java.time.LocalDateTime.now(), 
+            banHasta
+        ).toMinutes();
+    }
+
+    /**
+     * Limpia todas las sanciones (admin action)
+     */
+    public void limpiarSanciones() {
+        this.sancionesActivas = 0;
+        this.banHasta = null;
+        System.out.println("✅ Sanciones limpiadas para usuario: " + username);
+    }
+
+    public int getSancionesActivas() {
+        return sancionesActivas;
+    }
+
+    public java.time.LocalDateTime getBanHasta() {
+        return banHasta;
     }
 
     @Override

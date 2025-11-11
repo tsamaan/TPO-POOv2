@@ -111,23 +111,12 @@ public class UserService {
     // ============================================
 
     /**
-     * Verifica el email de un usuario
+     * Verifica el email de un usuario automáticamente al registrarse
+     * (sin proceso de verificación manual)
      */
     public void verificarEmail(Usuario usuario) {
         usuario.verificarEmail();
-        System.out.println("[USER SERVICE] Email verificado para: " + usuario.getUsername());
-    }
-
-    /**
-     * Simula envío de email de verificación
-     */
-    public void enviarEmailVerificacion(Usuario usuario) {
-        System.out.println("[USER SERVICE] Email de verificación enviado a: " + usuario.getEmail());
-        System.out.println("                (En producción se enviaría link real)");
-
-        // Para demo, auto-verificar después de 1 segundo
-        System.out.println("                Simulando verificación automática...");
-        verificarEmail(usuario);
+        // Email verificado automáticamente - sin logs innecesarios
     }
 
     // ============================================

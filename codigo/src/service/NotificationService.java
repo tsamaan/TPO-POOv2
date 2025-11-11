@@ -20,10 +20,12 @@ public class NotificationService {
         this.notifierFactory = new SimpleNotifierFactory();
         this.notifiers = new ArrayList<>();
         
-        // Inicializar todos los canales de notificación (Composite pattern manual)
+        // Inicializar canales de notificación
+        // Actualmente solo Email está activo
         this.notifiers.add(notifierFactory.createEmailNotifier());
-        this.notifiers.add(notifierFactory.createDiscordNotifier());
-        this.notifiers.add(notifierFactory.createPushNotifier());
+        
+        // TODO: Activar PushNotifier en el futuro cuando se implemente
+        // this.notifiers.add(notifierFactory.createPushNotifier());
     }
     
     /**

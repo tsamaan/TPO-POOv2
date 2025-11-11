@@ -395,13 +395,13 @@ public class MVCIntegrationTest {
 
         if (testsPassed == testsRun) {
             System.out.println("\n✓✓✓ TODOS LOS TESTS PASARON ✓✓✓");
-            System.out.println("\n✅ REFACTORIZACIÓN MVC: EXITOSA");
-            System.out.println("✅ STRATEGY PATTERN: CORREGIDO");
-            System.out.println("✅ ARQUITECTURA: PROFESIONAL");
-            System.out.println("\n🎯 Proyecto listo para entrega con calidad profesional");
+            System.out.println("\n REFACTORIZACIÓN MVC: EXITOSA");
+            System.out.println(" STRATEGY PATTERN: CORREGIDO");
+            System.out.println(" ARQUITECTURA: PROFESIONAL");
+            System.out.println("\n Proyecto listo para entrega con calidad profesional");
         } else {
             System.out.println("\n✗ ALGUNOS TESTS FALLARON");
-            System.out.println("⚠️ Revisar errores arriba");
+            System.out.println(" Revisar errores arriba");
         }
 
         System.out.println("\n═══════════════════════════════════════════════════════════════\n");

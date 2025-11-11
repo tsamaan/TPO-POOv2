@@ -16,7 +16,7 @@ public class EmailNotifierTest {
     
     public static void main(String[] args) {
         System.out.println("═══════════════════════════════════════════════════════");
-        System.out.println("  📧 TEST: EmailNotifier con Endpoint Real");
+        System.out.println("   TEST: EmailNotifier con Endpoint Real");
         System.out.println("═══════════════════════════════════════════════════════\n");
         
         // 1. Crear usuario de prueba (CAMBIAR EMAIL AQUÍ)
@@ -47,8 +47,8 @@ public class EmailNotifierTest {
         emailNotifier.sendNotification(notificacion);
         
         System.out.println("\n═══════════════════════════════════════════════════════");
-        System.out.println("  ✅ Test completado");
-        System.out.println("  📬 Verifica tu bandeja de entrada");
+        System.out.println("   Test completado");
+        System.out.println("   Verifica tu bandeja de entrada");
         System.out.println("═══════════════════════════════════════════════════════");
     }
 }

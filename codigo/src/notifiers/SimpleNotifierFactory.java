@@ -8,14 +8,4 @@ public class SimpleNotifierFactory extends NotifierFactory {
     public INotifier createEmailNotifier() {
         return new EmailNotifier();
     }
-
-    @Override
-    public INotifier createDiscordNotifier() {
-        return new DiscordNotifier();
-    }
-
-    @Override
-    public INotifier createPushNotifier() {
-        return new PushNotifier();
-    }
 }

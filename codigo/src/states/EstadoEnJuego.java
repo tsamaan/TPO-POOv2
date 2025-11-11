@@ -1,6 +1,7 @@
 package states;
 
 import models.Scrim;
+import models.Notificacion;
 
 public class EstadoEnJuego implements ScrimState {
 
@@ -17,6 +18,7 @@ public class EstadoEnJuego implements ScrimState {
     @Override
     public void cancelar(Scrim ctx) {
         ctx.cambiarEstado(new EstadoFinalizado());
-        ctx.notificarCambio(new models.Notificacion("Scrim finalizado"));
+        ctx.notificarATodos(Notificacion.TipoNotificacion.FINALIZADO,
+            "¡La partida ha finalizado! Gracias por jugar.");
     }
 }

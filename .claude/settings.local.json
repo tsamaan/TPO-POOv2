@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(javac:*)",
+      "Bash(java:*)",
+      "Bash(cmd /c RUN-APP.bat)",
+      "Bash(tee:*)",
+      "Bash(echo:*)",
+      "Bash(cmd /c COMPILAR.bat)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

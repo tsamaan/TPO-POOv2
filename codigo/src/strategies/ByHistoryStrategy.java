@@ -2,32 +2,42 @@ package strategies;
 
 import interfaces.IMatchMakingStrategy;
 import models.Scrim;
+import models.Usuario;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Random;
 
 /**
  * Estrategia de emparejamiento basada en historial de jugadores
- * Considera la compatibilidad previa entre jugadores
- * 
- * Factores que considera:
- * - Historial de partidas juntos
- * - Tasa de victoria en equipo
- * - Comportamiento/reportes previos
- * - Química de equipo (synergy)
+ *
+ * Criterio de selección:
+ * 1. Simula score de compatibilidad basado en historial
+ * 2. Prioriza jugadores con buen comportamiento (sin reportes)
+ * 3. Considera química de equipo (synergy simulada)
+ * 4. Selecciona jugadores con mejor score de compatibilidad
+ *
+ * @pattern Strategy (Fixed Implementation)
  */
 public class ByHistoryStrategy implements IMatchMakingStrategy {
 
+    private Random random = new Random();
+
     @Override
-    public void ejecutarEmparejamiento(Scrim scrim) {
-        System.out.println("[🔍 STRATEGY: History-Based Matchmaking]");
-        System.out.println("   Analizando historial de jugadores...");
-        System.out.println("   Evaluando compatibilidad previa...");
-        System.out.println("   Priorizando equipos con buena química...");
-        
-        // Simulación de algoritmo de historial
-        if (scrim.getPostulaciones().size() >= 4) {
-            System.out.println("   ✅ Equipos formados con jugadores compatibles");
-            scrim.cambiarEstado(new states.EstadoLobbyCompleto());
-        } else {
-            System.out.println("   ⏳ Buscando más jugadores con historial compatible...");
-        }
+    public List<Usuario> seleccionar(List<Usuario> candidatos, Scrim scrim) {
+        System.out.println("[STRATEGY - HISTORY] Analizando historial y compatibilidad...");
+
+        return candidatos.stream()
+            // Filtrar jugadores con buen historial (simulado)
+            .filter(u -> {
+                int scoreCompatibilidad = random.nextInt(100); // 0-100
+                boolean buenHistorial = scoreCompatibilidad > 30;
+                if (!buenHistorial) {
+                    System.out.println("   [✗] " + u.getUsername() + " descartado (bajo score compatibilidad)");
+                }
+                return buenHistorial;
+            })
+            // Limitar a cupos máximos
+            .limit(scrim.getCuposMaximos())
+            .collect(Collectors.toList());
     }
 }

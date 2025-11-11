@@ -121,6 +121,9 @@ public class MatchmakingController {
                                                 String juego, String rolUsuario) {
         List<Usuario> jugadores = new ArrayList<>();
         jugadores.add(usuarioActual);
+        
+        // ASIGNAR ROL AL USUARIO ACTUAL
+        usuarioActual.setRol(rolUsuario);
 
         // Calcular cuántos jugadores faltan según el formato del juego
         int jugadoresTotales = models.JuegoConfig.getJugadoresTotales(scrim.getFormato());
@@ -224,12 +227,18 @@ public class MatchmakingController {
         // Obtener roles
         List<String> rolesAsignados = obtenerRolesAsignados(jugadores);
 
-        // Mostrar equipos
+        // PRIMERO: Transiciones de estado (incluye confirmación)
+        // Si el usuario rechaza, la función retorna antes de mostrar los equipos
+        boolean partidaConfirmada = ejecutarTransicionesEstado(scrim, context, usuarioActual, jugadores);
+        
+        if (!partidaConfirmada) {
+            // Usuario rechazó la confirmación - no continuar
+            return;
+        }
+
+        // DESPUÉS de confirmar: Mostrar equipos formados
         consoleView.mostrarSubtitulo("FORMANDO EQUIPOS");
         consoleView.mostrarEquipos(equipoAzul, equipoRojo, rolesAsignados, jugadores, usuarioActual);
-
-        // Transiciones de estado (pasando usuario actual para confirmaciones)
-        ejecutarTransicionesEstado(scrim, context, usuarioActual, jugadores);
 
         // Generar y mostrar estadísticas
         mostrarEstadisticasFinales(jugadores, scrim, equipoAzul, equipoRojo);
@@ -273,8 +282,9 @@ public class MatchmakingController {
      * Ejecuta las transiciones de estado de la partida
      * NUEVA LÓGICA: Confirmación manual con sistema de sanciones
      * NUEVO: Envía email con estadísticas al finalizar
+     * @return true si la partida se confirmó y completó, false si fue cancelada
      */
-    private void ejecutarTransicionesEstado(Scrim scrim, ScrimContext context, 
+    private boolean ejecutarTransicionesEstado(Scrim scrim, ScrimContext context, 
                                            Usuario usuarioReal, List<Usuario> todosJugadores) {
         consoleView.mostrarSubtitulo("INICIANDO PARTIDA...");
 
@@ -291,7 +301,7 @@ public class MatchmakingController {
             // Usuario rechazó o está baneado
             consoleView.mostrarError("❌ Partida cancelada");
             context.cancelar();
-            return;
+            return false;  // Retorna false para indicar cancelación
         }
 
         // Transición: LobbyCompleto → Confirmado (solo si confirmó)
@@ -314,6 +324,8 @@ public class MatchmakingController {
         
         // NUEVO: Enviar email con estadísticas finales
         enviarEmailEstadisticasFinales(scrim, usuarioReal, todosJugadores);
+        
+        return true;  // Retorna true para indicar que la partida se completó
     }
 
     // ============================================

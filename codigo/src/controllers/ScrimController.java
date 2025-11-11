@@ -161,8 +161,13 @@ public class ScrimController {
         consoleView.mostrarExito("Rol seleccionado: " + rolSeleccionado);
         consoleView.mostrarInfo("Esperando a que se completen los cupos...");
 
+        // Calcular cuántos jugadores adicionales se necesitan
+        int jugadoresTotales = scrim.getCuposMaximos(); // 5v5 = 10, 1v1 = 2, etc.
+        int jugadoresActuales = scrim.getPostulaciones().size(); // Ya está el usuario
+        int jugadoresNecesarios = jugadoresTotales - jugadoresActuales;
+        
         // Simular otros jugadores uniéndose
-        simularJugadoresUniendo(context, scrim, juego, 7);
+        simularJugadoresUniendo(context, scrim, juego, jugadoresNecesarios);
 
         // Continuar con flujo de juego
         ejecutarFlujoLobby(context, scrim);
@@ -297,7 +302,7 @@ public class ScrimController {
     }
 
     /**
-     * Envía email con estadísticas finales del match
+     * Muestra estadísticas en consola y envía email con estadísticas finales del match
      */
     private void enviarEmailEstadisticasFinales(Scrim scrim, Usuario usuarioReal, List<Usuario> todosJugadores) {
         Random random = new Random();
@@ -328,6 +333,10 @@ public class ScrimController {
             .max((a, b) -> Double.compare(a.getKda(), b.getKda()))
             .orElse(estadisticas.get(0));
 
+        // MOSTRAR ESTADÍSTICAS EN CONSOLA
+        consoleView.mostrarEstadisticas(estadisticas, mvp.getUsuario());
+        gameView.mostrarMVP(mvp.getUsuario(), mvp.obtenerRendimiento());
+
         // Calcular marcador de equipos (asumiendo equipos balanceados)
         int killsEquipo1 = 0;
         int killsEquipo2 = 0;
@@ -340,6 +349,10 @@ public class ScrimController {
                 killsEquipo2 += estadisticas.get(i).getKills();
             }
         }
+
+        // MOSTRAR RESULTADO EN CONSOLA
+        String ganador = killsEquipo1 > killsEquipo2 ? "Team Azure" : "Team Crimson";
+        gameView.mostrarResultadoFinal(ganador, killsEquipo1, killsEquipo2);
 
         // Determinar si el usuario ganó (está en el equipo con más kills)
         boolean usuarioEnEquipo1 = todosJugadores.indexOf(usuarioReal) < mitad;

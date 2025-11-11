@@ -12,6 +12,7 @@ public class Notificacion {
     private UUID id;                          // Identificador único
     private Usuario destinatario;             // A quién se le envía
     private TipoNotificacion tipo;            // Tipo de notificación (enum)
+    private String titulo;                    // Título/Asunto del mensaje
     private String mensaje;                   // Cuerpo del mensaje
     private LocalDateTime fechaEnvio;         // Cuándo se envió
     private boolean leida;                    // ¿Usuario la leyó?
@@ -38,6 +39,7 @@ public class Notificacion {
     public Notificacion(TipoNotificacion tipo, String mensaje, Usuario destinatario) {
         this.id = UUID.randomUUID();
         this.tipo = tipo;
+        this.titulo = generarTituloPorTipo(tipo);  // Genera título automático
         this.mensaje = mensaje;
         this.destinatario = destinatario;
         this.leida = false;
@@ -49,6 +51,7 @@ public class Notificacion {
     public Notificacion(String mensaje) {
         this.id = UUID.randomUUID();
         this.tipo = TipoNotificacion.SCRIM_CREADO; // default
+        this.titulo = "Notificación eScrims";
         this.mensaje = mensaje;
         this.leida = false;
     }
@@ -69,6 +72,36 @@ public class Notificacion {
         return String.format("[%s] %s", tipo.name(), mensaje);
     }
     
+    /**
+     * Genera un título apropiado según el tipo de notificación
+     */
+    private String generarTituloPorTipo(TipoNotificacion tipo) {
+        switch (tipo) {
+            case SCRIM_CREADO:
+                return "🎮 Nuevo Scrim Disponible";
+            case LOBBY_COMPLETO:
+                return "✅ Lobby Completo - 10/10 Jugadores";
+            case CONFIRMADO:
+                return "🎯 Scrim Confirmado - ¡A Jugar!";
+            case EN_JUEGO:
+                return "⚔️ Partida Iniciada";
+            case FINALIZADO:
+                return "🏆 Partida Finalizada";
+            case CANCELADO:
+                return "❌ Scrim Cancelado";
+            case RECORDATORIO:
+                return "⏰ Recordatorio de Scrim";
+            case JUGADOR_REEMPLAZADO:
+                return "🔄 Jugador Reemplazado";
+            case APLICACION_ACEPTADA:
+                return "✅ Postulación Aceptada";
+            case APLICACION_RECHAZADA:
+                return "❌ Postulación Rechazada";
+            default:
+                return "📬 Notificación eScrims";
+        }
+    }
+    
     // ============ GETTERS ============
     public UUID getId() {
         return id;
@@ -84,6 +117,10 @@ public class Notificacion {
     
     public String getMensaje() {
         return mensaje;
+    }
+    
+    public String getTitulo() {
+        return titulo;
     }
     
     public LocalDateTime getFechaEnvio() {

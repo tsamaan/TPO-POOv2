@@ -55,22 +55,27 @@ public class AuthView {
         String email = consoleView.solicitarInput("Email");
         String password = consoleView.solicitarInput("Contraseña (mínimo 6 caracteres)");
 
-        // Tipo de autenticación
-        TipoAutenticacion tipoAuth = solicitarTipoAuth();
+        // Tipo de autenticación (por ahora solo LOCAL)
+        TipoAutenticacion tipoAuth = TipoAutenticacion.LOCAL;
+        consoleView.mostrarInfo("Tipo de autenticación: LOCAL (email/password)");
 
         return new DatosRegistro(username, email, password, tipoAuth);
     }
 
     /**
      * Solicita tipo de autenticación
+     * 
+     * @deprecated Actualmente solo se usa LOCAL. Este método está preparado
+     *             para futuras implementaciones de OAuth (Steam, Riot, Discord, Google)
      */
+    @Deprecated
     private TipoAutenticacion solicitarTipoAuth() {
         System.out.println();
         consoleView.mostrarInfo("Tipo de autenticación:");
         System.out.println("  [1] Local (usuario y contraseña)");
-        System.out.println("  [2] Steam (OAuth)");
-        System.out.println("  [3] Riot Games (OAuth)");
-        System.out.println("  [4] Discord (OAuth)");
+        System.out.println("  [2] Steam (OAuth) - No disponible");
+        System.out.println("  [3] Riot Games (OAuth) - No disponible");
+        System.out.println("  [4] Discord (OAuth) - No disponible");
 
         int opcion = consoleView.solicitarNumero("Selecciona tipo de autenticación", 1, 4);
 

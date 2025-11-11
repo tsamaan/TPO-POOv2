@@ -9,6 +9,17 @@ El sistema de autenticación está implementado usando **arquitectura MVC** con 
 - **Controller:** `UserController` (lógica de negocio)
 - **Service:** `UserService` (persistencia en memoria)
 
+### **🔐 Tipo de Autenticación**
+
+**Actualmente solo está implementada la autenticación LOCAL:**
+- ✅ **LOCAL**: Usuario/Email + Password (implementado)
+- ⏸️ **STEAM**: OAuth con Steam (no implementado)
+- ⏸️ **RIOT**: OAuth con Riot Games (no implementado)
+- ⏸️ **DISCORD**: OAuth con Discord (no implementado)
+- ⏸️ **GOOGLE**: OAuth con Google (no implementado)
+
+> **Nota:** La arquitectura está preparada para agregar otros proveedores de autenticación en el futuro mediante el patrón Adapter (`AuthService`, `LocalAuthAdapter`), pero por ahora solo usamos autenticación local con email/password.
+
 ## 📊 Arquitectura del Sistema
 
 ```
@@ -48,7 +59,7 @@ public Usuario registrar() {
     // - datos.username    (ej: "ShadowBlade")
     // - datos.email       (ej: "shadow@escrims.com")
     // - datos.password    (ej: "miPassword123")
-    // - datos.tipoAuth    (LOCAL, STEAM, RIOT, DISCORD)
+    // - datos.tipoAuth    (LOCAL - único tipo soportado actualmente)
 ```
 
 ### **Paso 3: Validaciones**
@@ -490,7 +501,7 @@ public class Usuario {
     
     // AUTENTICACIÓN
     private String passwordHash;
-    private TipoAutenticacion tipoAuth;  // LOCAL, STEAM, RIOT, DISCORD
+    private TipoAutenticacion tipoAuth;  // LOCAL (único tipo implementado)
     private EstadoEmail estadoEmail;     // PENDIENTE, VERIFICADO
     
     // PERFIL EDITABLE
@@ -530,12 +541,8 @@ public class Usuario {
 │ [?] Email: shadow@escrims.com                            │
 │ [?] Password: ******                                     │
 │                                                            │
-│ [?] Tipo de autenticación:                               │
-│     [1] Local (email/password)                           │
-│     [2] Steam                                             │
-│     [3] Riot Games                                        │
-│     [4] Discord                                           │
-│ [>] Opción: 1                                            │
+│ [*] Tipo de autenticación: LOCAL                         │
+│     (Única opción disponible actualmente)                │
 │                                                            │
 │ [+] ¡Registro exitoso!                                   │
 │ [+] Usuario creado: ShadowBlade                          │

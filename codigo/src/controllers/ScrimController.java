@@ -153,6 +153,9 @@ public class ScrimController {
 
         // Seleccionar rol
         String rolSeleccionado = userController.seleccionarRol(juego);
+        
+        // ASIGNAR ROL AL USUARIO (FIX: usuario sin rol)
+        usuario.setRol(rolSeleccionado);
 
         // Crear contexto y postular
         ScrimContext context = new ScrimContext(scrim, scrim.getEstado());
@@ -166,22 +169,43 @@ public class ScrimController {
         int jugadoresActuales = scrim.getPostulaciones().size(); // Ya está el usuario
         int jugadoresNecesarios = jugadoresTotales - jugadoresActuales;
         
+        // DEBUG: Mostrar información de cálculo
+        consoleView.mostrarInfo(String.format("[DEBUG] Cupos máximos: %d | Jugadores actuales: %d | Jugadores a simular: %d",
+            jugadoresTotales, jugadoresActuales, jugadoresNecesarios));
+        
         // Simular otros jugadores uniéndose
         simularJugadoresUniendo(context, scrim, juego, jugadoresNecesarios);
 
         // Continuar con flujo de juego
-        ejecutarFlujoLobby(context, scrim);
+        ejecutarFlujoLobby(context, scrim, usuario);
     }
 
     /**
      * Simula jugadores uniéndose a un scrim
+     * ACTUALIZADO: Asigna roles únicos por equipo para LoL/Valorant
      */
     private void simularJugadoresUniendo(ScrimContext context, Scrim scrim, String juego, int cantidad) {
         gameView.mostrarOtrosUniendose();
 
         Random random = new Random();
-        String[] nombresBot = {"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"};
+        String[] nombresBot = {"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Omega"};
         String[] rolesDisponibles = menuView.getRolesDisponibles(juego);
+
+        // Para LoL/Valorant: rastrear roles únicos por equipo
+        List<String> rolesEquipo1 = new ArrayList<>();
+        List<String> rolesEquipo2 = new ArrayList<>();
+        
+        // El usuario ya está en postulaciones, obtener su rol para el primer equipo
+        List<models.Postulacion> postulacionesActuales = scrim.getPostulaciones();
+        if (!postulacionesActuales.isEmpty()) {
+            Usuario usuarioPrimero = postulacionesActuales.get(0).getUsuario();
+            if (usuarioPrimero.getRol() != null) {
+                rolesEquipo1.add(usuarioPrimero.getRol());
+            }
+        }
+
+        int jugadoresTotales = scrim.getCuposMaximos();
+        int jugadoresPorEquipo = jugadoresTotales / 2;
 
         for (int i = 0; i < cantidad && i < nombresBot.length; i++) {
             consoleView.delay(600);
@@ -193,7 +217,28 @@ public class ScrimController {
                                      "bot" + (i+1) + "@escrims.com");
             bot.getRangoPorJuego().put(juego, rangoBot);
 
-            String rolBot = rolesDisponibles[random.nextInt(rolesDisponibles.length)];
+            // Asignar rol según el juego
+            String rolBot;
+            if (esJuegoConRolesUnicos(juego)) {
+                // Para LoL/Valorant: asignar roles únicos por equipo
+                int jugadoresEnEquipo1 = rolesEquipo1.size();
+                int jugadoresEnEquipo2 = rolesEquipo2.size();
+
+                if (jugadoresEnEquipo1 < jugadoresPorEquipo) {
+                    // Asignar al equipo 1
+                    rolBot = obtenerRolDisponible(rolesDisponibles, rolesEquipo1);
+                    rolesEquipo1.add(rolBot);
+                } else {
+                    // Asignar al equipo 2
+                    rolBot = obtenerRolDisponible(rolesDisponibles, rolesEquipo2);
+                    rolesEquipo2.add(rolBot);
+                }
+            } else {
+                // Para otros juegos: rol aleatorio
+                rolBot = rolesDisponibles[random.nextInt(rolesDisponibles.length)];
+            }
+
+            bot.setRol(rolBot);
             context.postular(bot, rolBot);
 
             gameView.mostrarJugadorUnido(bot.getUsername(), rangoBot);
@@ -201,22 +246,38 @@ public class ScrimController {
     }
 
     /**
+     * Verifica si el juego requiere roles únicos por equipo
+     */
+    private boolean esJuegoConRolesUnicos(String juego) {
+        String juegoLower = juego.toLowerCase();
+        return juegoLower.contains("league") || juegoLower.contains("lol") || 
+               juegoLower.contains("valorant");
+    }
+
+    /**
+     * Obtiene un rol disponible que no esté ya asignado en el equipo
+     */
+    private String obtenerRolDisponible(String[] rolesDisponibles, List<String> rolesYaAsignados) {
+        for (String rol : rolesDisponibles) {
+            if (!rolesYaAsignados.contains(rol)) {
+                return rol;
+            }
+        }
+        // Si todos los roles están asignados, devolver el primero (fallback)
+        return rolesDisponibles[0];
+    }
+
+    /**
      * Ejecuta flujo de lobby completo → confirmado → en juego → finalizado
      * Incluye confirmaciones de jugadores y emails de notificación
      */
-    private void ejecutarFlujoLobby(ScrimContext context, Scrim scrim) {
+    private void ejecutarFlujoLobby(ScrimContext context, Scrim scrim, Usuario usuarioActual) {
         consoleView.mostrarExito("¡Sala completa! Iniciando partida...");
 
-        // Obtener usuario real (el primer jugador que no es bot)
-        Usuario usuarioReal = null;
+        // Obtener todos los jugadores
         List<Usuario> todosJugadores = new ArrayList<>();
-        
         for (models.Postulacion post : scrim.getPostulaciones()) {
-            Usuario jugador = post.getUsuario();
-            todosJugadores.add(jugador);
-            if (jugador.getId() < 100) { // IDs < 100 son usuarios reales
-                usuarioReal = jugador;
-            }
+            todosJugadores.add(post.getUsuario());
         }
 
         // Transición: Buscando → LobbyCompleto
@@ -232,7 +293,7 @@ public class ScrimController {
         consoleView.mostrarInfo("Debes confirmar tu participación en la partida\n");
 
         // Procesar confirmaciones (solo pregunta al usuario real)
-        boolean todosConfirmaron = procesarConfirmacionesJugadores(scrim, usuarioReal);
+        boolean todosConfirmaron = procesarConfirmacionesJugadores(scrim, usuarioActual);
         
         if (!todosConfirmaron) {
             consoleView.mostrarError("Partida cancelada - Un jugador rechazó la confirmación");
@@ -243,6 +304,15 @@ public class ScrimController {
         // Transición: LobbyCompleto → Confirmado
         context.cambiarEstado(new EstadoConfirmado());
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
+
+        // FORMAR Y MOSTRAR EQUIPOS (después de confirmación)
+        consoleView.delay(1000);
+        consoleView.mostrarSubtitulo("FORMANDO EQUIPOS");
+        Equipo[] equipos = formarEquipos(todosJugadores);
+        Equipo equipoAzul = equipos[0];
+        Equipo equipoRojo = equipos[1];
+        List<String> rolesAsignados = obtenerRolesAsignados(todosJugadores);
+        consoleView.mostrarEquipos(equipoAzul, equipoRojo, rolesAsignados, todosJugadores, usuarioActual);
 
         // Transición: Confirmado → EnJuego
         consoleView.delay(1000);
@@ -258,7 +328,11 @@ public class ScrimController {
         gameView.mostrarEstadoActual(scrim.getEstado().getClass().getSimpleName());
 
         // Enviar email con estadísticas finales
-        enviarEmailEstadisticasFinales(scrim, usuarioReal, todosJugadores);
+        enviarEmailEstadisticasFinales(scrim, usuarioActual, todosJugadores);
+        
+        // LIMPIAR SALA para reutilización (FIX: salas acumulan jugadores)
+        scrim.getPostulaciones().clear();
+        context.cambiarEstado(new EstadoBuscandoJugadores());
     }
 
     /**
@@ -299,6 +373,37 @@ public class ScrimController {
 
         consoleView.mostrarExito("\n✓ ¡TODOS LOS JUGADORES CONFIRMARON! (" + confirmados + "/" + totalJugadores + ")");
         return true;
+    }
+
+    /**
+     * Forma dos equipos de forma equitativa
+     */
+    private Equipo[] formarEquipos(List<Usuario> jugadores) {
+        Equipo equipoAzul = new Equipo("Team Azure");
+        Equipo equipoRojo = new Equipo("Team Crimson");
+
+        int mitad = jugadores.size() / 2;
+        
+        for (int i = 0; i < jugadores.size(); i++) {
+            if (i < mitad) {
+                equipoAzul.asignarJugador(jugadores.get(i));
+            } else {
+                equipoRojo.asignarJugador(jugadores.get(i));
+            }
+        }
+
+        return new Equipo[]{equipoAzul, equipoRojo};
+    }
+
+    /**
+     * Obtiene lista de roles asignados a jugadores
+     */
+    private List<String> obtenerRolesAsignados(List<Usuario> jugadores) {
+        List<String> roles = new ArrayList<>();
+        for (Usuario jugador : jugadores) {
+            roles.add(jugador.getRol() != null ? jugador.getRol() : "Sin rol");
+        }
+        return roles;
     }
 
     /**

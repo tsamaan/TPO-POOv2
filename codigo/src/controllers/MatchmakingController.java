@@ -51,6 +51,17 @@ public class MatchmakingController {
     public void juegoRapido(Usuario usuario, UserController userController) {
         consoleView.mostrarTitulo("JUEGO RÁPIDO - MATCHMAKING AUTOMÁTICO");
 
+        // VALIDAR SI EL USUARIO ESTÁ BANEADO
+        if (usuario.estaBaneado()) {
+            long minutosRestantes = usuario.getMinutosRestantesBan();
+            consoleView.mostrarError("\n🚫 NO PUEDES BUSCAR PARTIDAS");
+            consoleView.mostrarAdvertencia("Estás baneado por rechazar partidas anteriores");
+            consoleView.mostrarInfo("Tiempo restante de ban: " + minutosRestantes + " minutos");
+            consoleView.mostrarInfo("Total de sanciones: " + usuario.getSancionesActivas());
+            System.out.println("\n💡 Espera a que expire el ban para volver a jugar\n");
+            return; // Salir sin permitir buscar partida
+        }
+
         // Seleccionar juego - usar juego principal del usuario si está configurado
         String juegoSeleccionado;
         if (usuario.getJuegoPrincipal() != null && !usuario.getJuegoPrincipal().isEmpty()) {
@@ -305,7 +316,8 @@ public class MatchmakingController {
         if (!todosConfirmaron) {
             // Usuario rechazó o está baneado
             consoleView.mostrarError("❌ Partida cancelada");
-            context.cancelar();
+            // NO llamar a context.cancelar() para evitar envío masivo de emails
+            // El email ya se envió solo al usuario que canceló
             return false;  // Retorna false para indicar cancelación
         }
 
@@ -388,6 +400,10 @@ public class MatchmakingController {
                     consoleView.mostrarError("🚫 Sancionado (" + usuarioReal.getSancionesActivas() + " sanciones totales)");
                     consoleView.mostrarInfo("   Ban de " + usuarioReal.getMinutosRestantesBan() + " minutos");
                     System.out.println("\n💡 Los demás jugadores vuelven a la cola de matchmaking");
+                    
+                    // ENVIAR EMAIL DE CANCELACIÓN SOLO AL USUARIO QUE RECHAZÓ
+                    enviarEmailCancelacion(usuarioReal, scrim);
+                    
                     return false;
                 }
             } else {
@@ -405,6 +421,62 @@ public class MatchmakingController {
         // Todos confirmaron
         consoleView.mostrarExito("\n✅ ¡TODOS LOS JUGADORES CONFIRMARON! (" + confirmados + "/" + total + ")");
         return true;
+    }
+
+    /**
+     * Envía email de cancelación solo al usuario que rechazó la partida
+     */
+    private void enviarEmailCancelacion(Usuario usuario, Scrim scrim) {
+        try {
+            String asunto = "[eScrims] Has rechazado la partida - Sanción aplicada";
+            
+            String mensaje = String.format(
+                "Has rechazado la confirmación de la partida.\n\n" +
+                "SANCIÓN APLICADA:\n" +
+                "- Sanciones totales: %d\n" +
+                "- Tiempo de ban: %d minutos\n" +
+                "- No podrás unirte a partidas hasta que expire el ban\n\n" +
+                "Los demás jugadores han vuelto a la cola de matchmaking.\n\n" +
+                "Detalles de la partida cancelada:\n" +
+                "- Juego: %s\n" +
+                "- Formato: %s\n" +
+                "- Modalidad: %s\n\n" +
+                "¡Espera a que expire tu ban para volver a jugar!",
+                usuario.getSancionesActivas(),
+                usuario.getMinutosRestantesBan(),
+                scrim.getJuego(),
+                scrim.getFormato(),
+                scrim.getModalidad()
+            );
+            
+            // Enviar email usando la API
+            String url = "https://send-email-zeta.vercel.app/send-email";
+            String jsonBody = String.format(
+                "{\"to\":\"%s\",\"subject\":\"%s\",\"text\":\"%s\"}",
+                usuario.getEmail(),
+                asunto,
+                mensaje.replace("\n", "\\n").replace("\"", "\\\"")
+            );
+            
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .header("Content-Type", "application/json")
+                .timeout(java.time.Duration.ofSeconds(5))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+            
+            client.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+                .thenApply(java.net.http.HttpResponse::statusCode)
+                .thenAccept(statusCode -> {
+                    if (statusCode == 200) {
+                        System.out.println("📧 Email de cancelación enviado a " + usuario.getEmail());
+                    }
+                });
+                
+        } catch (Exception e) {
+            System.err.println("Error enviando email de cancelación: " + e.getMessage());
+        }
     }
 
     /**
